@@ -1,92 +1,91 @@
-# CLAUDE.md — Borç Takip 0A mühendislik rehberi
+# CLAUDE.md — Borç Takip Aile Sürümü · mühendislik rehberi
 
-Bu dosya, depo üzerinde çalışan herkes (insan veya AI) için tasarım kurallarını
-ve mimariyi özetler. Ürün/akış spesifikasyonu: [`docs/akis-spec-v0.2.md`](docs/akis-spec-v0.2.md).
+Bu dosya depo üzerinde çalışan herkes (insan/AI) için mimari ve değişmez kuralları
+özetler. Ürün yönü: [`docs/aile-surumu-revize.md`](docs/aile-surumu-revize.md).
 
-## 0. Değişmez kurallar (akışın her yerinde)
+## 0. Konumlandırma
 
-1. **Tavan ≠ gerçek.** Tahminler TCMB azami (tavan) oranıyla. Dil her zaman
-   "yaklaşık / tavan orana göre". Kesin kazanç iddiası yok.
-2. **Yargı yok, merdiven var.** Skor/bölge/damga yok. Her uyarı bir sonraki
-   somut adıma bağlanır.
-3. **Wow opsiyonel alana takılmaz.** APR ve ekstra tutar boşsa bile akış ve
-   içgörü devam eder (fallback / illüstratif değerle).
+Bulut tabanlı **aile** uygulaması: tüm hane borç/ödeme/birikimi tek panoda + push/
+e-posta hatırlatma. Borç-azaltma içgörüsü **yan özellik** (borcun içinde sekme), vitrin değil.
 
-## 1. Para ve format
+## 1. Görünmez prensipler (ekrana YAZILMAZ, hesapta uygulanır)
 
-- Para **her zaman `number`** (TRY) olarak saklanır; UI'da `tr-TR` formatlanır.
+1. **Tavan ≠ gerçek.** Faiz tahmini TCMB üst sınırıyla; UI'da yalnız küçük "≈ tahmini"
+   rozeti + dokununca "kendi oranını girersen daha doğru" notu.
+2. **Yargı yok.** Asgari-tuzağı sıcak ve suçlamasız anlatılır.
+3. **Az soru.** Zorunlu alan minimumda; opsiyoneller akışı durdurmaz.
+
+Bu prensipler iç dildir; sloganlaştırılıp ekrana basılmaz. Kullanıcıya görünen dil
+sıcak ve azdır (bkz. spec §"Kullanıcıya görünen dil").
+
+## 2. Para ve format
+
+- Para **her zaman `number`** (DB'de `numeric`), UI'da `tr-TR`.
 - Tek kaynak: `src/core/format.ts` (`parseTRYInput`, `formatTRY`, `formatPercent`).
-- Koda gömülü sayısal örnek yok; sample veri `src/data/sample.ts` içinde ve
-  `mode: "sample"` ile işaretli.
+- Çekirdek motor (`src/core/`) saf ve framework-bağımsız; hem RN hem Edge Function kullanır.
 
-## 2. İki ayrı oran/asgari sistemi — KARIŞTIRMA
+## 3. İki ayrı oran/asgari sistemi — KARIŞTIRMA
 
 | Sistem | Bazı | Kaynak | Kod |
 |---|---|---|---|
-| **Faiz tahmini** | dönem borcu (statement) | TCMB azami/tavan | `src/core/rateConfig.ts` |
+| **Faiz tahmini** | dönem borcu | TCMB azami/tavan | `src/core/rateConfig.ts` |
 | **Asgari ödeme** | kart limiti | BDDK %20/%40 | `src/core/minimum.ts` |
 
-Faiz tieri dönem borcuna, asgari tieri kart limitine bakar. Bunlar bağımsızdır.
+Kullanıcı oranı (`user_monthly_rate`) fallback'i **ezer** (`resolveMonthlyRate`).
+TCMB tablosu BETA: oran değişince elle güncellenir (`RATE_SOURCE.lastCheckedAt`).
 
-## 3. Üçlü maliyet ayrımı (§8)
+## 4. Hane modeli & güvenlik (en kritik)
 
-`Asgari (kural)` · `Faiz tahmini (tavan)` · `Gerçek maliyet (banka + BSMV/KKDF)`.
-UI'da `src/components/Disclaimers.tsx` ile net ayrılır. Birbirine karışırsa güven gider.
+- **Üye** (`profiles` ↔ auth.users) ile **kişi** (`persons`, borç bağlanır, üye olmak
+  zorunda değil) ayrı. `persons.linked_member_id` ile bağlanır.
+- **RLS her tabloda açık.** Erişim `is_household_member(household_id)` ile; üye yalnız
+  üyesi olduğu haneyi görür. Yeni hane-kapsamlı tablo eklerken RLS politikasını UNUTMA.
+- Yumurta-tavuk durumları (ilk insert) `security definer` RPC ile çözülür
+  (`create_household`, `accept_invite`) — `supabase/rpc.sql`.
+- İstemci **asla** service-role key tutmaz; yalnız anon key (`EXPO_PUBLIC_*`).
 
-## 4. APR fallback
+## 5. Hatırlatma motoru (`supabase/functions/reminder-cron`)
 
-- Seed'li tablo `src/core/rateConfig.ts` (`CREDIT_CARD_PURCHASE_TIERS`,
-  `CASH_ADVANCE_KMH_RATE`). **Admin UI yok (0A).**
-- Kullanıcı oranı (`userMonthlyRate`) fallback'i **ezer** (`resolveMonthlyRate`).
-- **BETA:** TCMB oranı değişince tablo elle güncellenmeli. `RATE_SOURCE.lastCheckedAt`
-  UI'da küçük gösterilir.
+- Günlük cron (pg_cron → Edge Function). Service-role ile tüm haneleri tarar.
+- Push: gün-önce (`days_before`) + son gün. E-posta: haftalık özet (`digest_weekday`).
+- **Idempotency zorunlu:** her gönderim `reminders_log`'a unique kayıt; çift gönderim yok.
+- Edge Function Deno'dur; `src/core`'u import etmez (ayrı runtime) — kritik küçük
+  mantık (asgari, tarih) fonksiyon içinde tekrarlanır. Değişirse iki yeri de güncelle.
 
-## 5. Plan motoru (akış spec §5–6 · `src/core/payoff.ts`)
+## 6. İstemci mimarisi
 
-İki **ayrı** blok:
+- **expo-router** file-based. `app/_layout.tsx` oturum + hane bekçisidir
+  (oturum yok → `sign-in`; hane yok → `onboarding`).
+- Oturum/aktif hane: `src/providers/SessionProvider.tsx`.
+- Pano verisi ve türetilmiş değerler: `src/hooks/useHousehold.ts` (toplam borç/varlık/
+  net, kişi kırılımı, yaklaşan ödemeler).
+- Paylaşılan UI `src/components/ui.tsx`, renkler `src/theme.ts`.
 
-- **Blok A — Zorunlu:** kart asgarileri + kredi taksitleri + kullanıcı minimumları.
-  Sıralama anahtarı: **son ödeme günü (artan)**. Amaç: gecikmeyi önle.
-- **Blok B — Ekstra:** kalan bütçe. Sıralama anahtarı: **seçilen strateji (tek anahtar)**.
-  - `avalanche` → aylık oran (azalan)
-  - `snowball` → bakiye (artan)
-- **KMH:** regüle asgarisi yok → her zaman **ekstra** hedefi, zorunlu değil.
-- **"Neden" metni** asla elle yazılmaz; motordan üretilir (`extraReason`,
-  `minimumReason`) ki gösterilen sıra ile gerekçe çelişmesin.
+## 7. Env & gizli anahtarlar
 
-> Not: 0A'da çekirdek mantık `src/core/` altındadır (spec'teki `packages/core/payoff`
-> referansının 0A karşılığı). Monorepo'ya geçişte `src/core` → `packages/core` taşınabilir.
+- İstemci: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (`.env`).
+- Edge Function: `RESEND_API_KEY`, `RESEND_FROM` (`supabase secrets set`).
+- `.env` ve `supabase/.env.local` **commit edilmez** (`.gitignore`).
 
-## 6. Veri & gizlilik
+## 8. Faz kilidi
 
-- Local-first, **auth yok, sync yok**. Tek kaynak `localStorage` (`src/core/storage.ts`).
-- Export/import JSON ile (`exportState` / `importState`).
-- PWA: `public/manifest.webmanifest` + `public/sw.js` (offline-first app shell).
+**F1 (VAR):** auth · hane + üye/kişi + davet · borç/ödeme/varlık girişi · aile panosu ·
+push + e-posta hatırlatma · asgari-tuzağı içgörüsü (basit).
 
-## 7. Event / metrik temizliği (§9–10)
+**F2 (YOK):** çığ/kartopu sıralama · koçluk add-on · abonelik · raporlar · MKK import.
+**F3:** banka entegrasyonu (lisanslı partner).
 
-- `src/analytics/events.ts`. `real_*` ve `sample_*` event'leri **ayrı** tutulur.
-- Funnel ve north-star **yalnız `real_*`** event'lerden okunur.
-- 0A'da backend yok; event'ler local buffer + console'a yazılır.
-
-## 8. 0A kapsam kilidi
-
-**VAR:** kapısız giriş · tek borçla onboarding · gerçek/örnek ayrımı · TCMB tavan
-fallback · kullanıcı override · BDDK asgari · ilk içgörü · zorunlu blok · ekstra blok ·
-çığ/kartopu v1 · son ödeme uyarısı · local-first PWA · export/import.
-
-**YOK (sonraki faz):** sağlık skoru · tam koçluk · Supabase sync · hane daveti ·
-MKK import · lead-gen · admin UI · gecikme faizi + BSMV/KKDF detay · banka entegrasyonu.
+> ⚠️ Mevzuat: borç-azaltma = "koçluk/eğitim", "yatırım tavsiyesi" değil. Komisyonlu
+> ürün önerisi mevzuata tabi — ürünleşmeden önce hukuk onayı.
 
 ## 9. Geliştirme
 
 ```bash
 npm install
-npm run dev        # Vite dev server
+npm run start      # Expo dev server
 npm test           # vitest — çekirdek motor testleri
 npm run typecheck  # tsc --noEmit
-npm run build      # tsc -b && vite build
 ```
 
-Çekirdek mantık (`src/core/`) saf ve test edilebilir tutulur; React katmanı yalnız
-onu gösterir. Yeni hesap kuralı eklerken önce `src/core/__tests__/engine.test.ts`.
+Yeni hesap kuralı eklerken önce `src/core/__tests__/engine.test.ts`. DB değişikliği
+`supabase/schema.sql` + RLS + (gerekirse) `rpc.sql`; tipleri `src/lib/database.types.ts`'e yansıt.

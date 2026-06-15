@@ -1,4 +1,4 @@
-// Son ödeme günü -> kalan gün hesabı.
+// Son ödeme günü -> kalan gün hesabı. Hatırlatma motoru da bunu kullanır.
 
 /** Bir sonraki `dueDay` (ayın günü, 1–31) tarihine kalan gün sayısı. */
 export function daysUntilDue(dueDay: number, today: Date = new Date()): number {
@@ -17,4 +17,23 @@ export function daysUntilDue(dueDay: number, today: Date = new Date()): number {
   }
   const diff = target.getTime() - todayMidnight.getTime();
   return Math.round(diff / (1000 * 60 * 60 * 24));
+}
+
+/** Bir sonraki son ödeme tarihini (Date) döner. */
+export function nextDueDate(dueDay: number, today: Date = new Date()): Date {
+  const days = daysUntilDue(dueDay, today);
+  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+const TR_DAYS = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+const TR_MONTHS = [
+  "Oca", "Şub", "Mar", "Nis", "May", "Haz",
+  "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara",
+];
+
+/** "Salı, 19 Haz" gibi kısa tr gösterim. */
+export function formatShortDate(date: Date): string {
+  return `${TR_DAYS[date.getDay()]}, ${date.getDate()} ${TR_MONTHS[date.getMonth()]}`;
 }

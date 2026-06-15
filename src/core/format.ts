@@ -1,48 +1,37 @@
-// tr-TR money formatting & parsing. Money in = numeric, money out = formatted.
+// tr-TR para formatlama & parse. Para giriş = numeric, para çıkış = formatlı.
+// Bu modül framework'ten bağımsızdır (RN + Edge Function birlikte kullanır).
 
-const tryFormatter = new Intl.NumberFormat("tr-TR", {
-  style: "currency",
-  currency: "TRY",
-  maximumFractionDigits: 0,
-});
-
-const tryFormatter2 = new Intl.NumberFormat("tr-TR", {
-  style: "currency",
-  currency: "TRY",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-/** "₺18.400" — whole-lira display used across the flow. */
+/** "₺18.400" — tam lira gösterimi. */
 export function formatTRY(value: number): string {
   if (!Number.isFinite(value)) return "—";
-  return tryFormatter.format(Math.round(value));
+  return "₺" + Math.round(value).toLocaleString("tr-TR");
 }
 
-/** "₺18.400,00" — used where kuruş precision matters. */
+/** "₺18.400,00" — kuruş hassasiyeti gereken yerde. */
 export function formatTRY2(value: number): string {
   if (!Number.isFinite(value)) return "—";
-  return tryFormatter2.format(value);
+  return (
+    "₺" +
+    value.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  );
 }
 
-/** "%4,25" from a monthly rate like 0.0425. */
+/** "%4,25" — aylık orandan (0.0425). */
 export function formatPercent(rate: number): string {
   if (!Number.isFinite(rate)) return "—";
-  const pct = rate * 100;
-  return `%${pct.toLocaleString("tr-TR", { maximumFractionDigits: 2 })}`;
+  return "%" + (rate * 100).toLocaleString("tr-TR", { maximumFractionDigits: 2 });
 }
 
 /**
- * Parse a tr-TR money string into a number.
- * Accepts "18.400", "18.400,50", "18400", "₺18.400", "1.234.567,89".
- * Returns null when nothing numeric is present.
+ * tr-TR para string'ini sayıya çevir.
+ * "18.400", "18.400,50", "18400", "₺18.400", "1.234.567,89" kabul eder.
+ * Sayısal içerik yoksa null döner.
  */
 export function parseTRYInput(raw: string): number | null {
   if (raw == null) return null;
   const cleaned = raw.replace(/[^\d.,-]/g, "").trim();
   if (cleaned === "") return null;
-
-  // Turkish convention: "." = thousands separator, "," = decimal separator.
+  // Türkçe: "." binlik ayracı, "," ondalık ayracı.
   const normalized = cleaned.replace(/\./g, "").replace(/,/g, ".");
   const value = Number(normalized);
   return Number.isFinite(value) ? value : null;
