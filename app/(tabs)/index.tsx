@@ -57,6 +57,14 @@ export default function Dashboard() {
             </Text>
           </View>
         </View>
+        {data.cashFlows.length > 0 && (
+          <Text style={{ color: colors.inkSoft, fontSize: 13, marginTop: spacing(1) }}>
+            Bu ay net ≈{" "}
+            <Text style={{ color: data.monthlyNet < 0 ? colors.danger : colors.ink, fontWeight: "700" }}>
+              {formatTRY(data.monthlyNet)}
+            </Text>
+          </Text>
+        )}
       </Card>
 
       {empty && (
@@ -85,11 +93,11 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Birikimler (mevduatta vade sonu alt metni) */}
-      {data.assets.length > 0 && (
+      {/* Birikimler (TRY değer + kâr/zarar rozeti; mevduatta vade sonu) */}
+      {data.assetViews.length > 0 && (
         <Card>
           <Text style={styles.section}>Birikimler</Text>
-          {data.assets.map((a) => {
+          {data.assetViews.map(({ asset: a, valueTRY, pnlTRY }) => {
             const dep =
               a.kind === "deposit" && a.annual_rate != null && a.term_days != null
                 ? depositYield({
@@ -102,15 +110,26 @@ export default function Dashboard() {
                 : null;
             return (
               <View key={a.id} style={styles.row}>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={{ color: colors.ink, fontWeight: "600" }}>{a.label}</Text>
                   {dep && (
                     <Text style={{ color: colors.muted, fontSize: 13 }}>
                       Vade sonu ≈ {formatTRY(dep.maturityValue)} · {formatShortDate(dep.maturityDate)}
                     </Text>
                   )}
+                  {a.last_price == null && (a.kind === "fund" || a.kind === "stock" || a.kind === "commodity" || a.kind === "crypto") && (
+                    <Text style={{ color: colors.muted, fontSize: 13 }}>fiyat bekleniyor</Text>
+                  )}
                 </View>
-                <Text style={{ color: colors.asset, fontWeight: "700" }}>{formatTRY(Number(a.balance))}</Text>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={{ color: colors.asset, fontWeight: "700" }}>{formatTRY(valueTRY)}</Text>
+                  {pnlTRY != null && (
+                    <Text style={{ color: pnlTRY >= 0 ? colors.ok : colors.danger, fontSize: 12, fontWeight: "700" }}>
+                      {pnlTRY >= 0 ? "▲ " : "▼ "}
+                      {formatTRY(Math.abs(pnlTRY))}
+                    </Text>
+                  )}
+                </View>
               </View>
             );
           })}

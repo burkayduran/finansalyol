@@ -122,7 +122,8 @@ create table if not exists public.debts (
   kind               text not null check (kind in ('credit_card', 'kmh', 'kmh_installment', 'loan')),
   bank               text not null,
   label              text,
-  balance            numeric(14, 2) not null default 0,
+  balance            numeric(14, 2) not null default 0,  -- loan/kmh_installment: türetilir
+  total_amount       numeric(14, 2),      -- toplam kredi/avans tutarı (taksitli)
   card_limit         numeric(14, 2),
   installment        numeric(14, 2),
   term_count             int,             -- toplam taksit sayısı (loan / kmh_installment)
@@ -144,12 +145,20 @@ create table if not exists public.assets (
   household_id  uuid not null references public.households (id) on delete cascade,
   person_id     uuid references public.persons (id) on delete set null,
   label         text not null,
-  kind          text not null default 'cash' check (kind in ('cash', 'deposit', 'fund', 'other')),
+  kind          text not null default 'cash'
+                check (kind in ('cash', 'deposit', 'fund', 'stock', 'commodity', 'crypto', 'other')),
   balance       numeric(14, 2) not null default 0,  -- mevduatta = anapara
   annual_rate   numeric(6, 3),   -- yıllık faiz %, mevduat
   term_days     int,             -- vade (gün), mevduat
   stopaj        numeric(5, 2),   -- stopaj %, mevduat
   start_date    date,            -- başlangıç tarihi, mevduat
+  symbol         text,            -- fon kodu / hisse ticker / coin sembolü
+  commodity_type text,            -- gold|silver|platinum|palladium
+  quantity       numeric(18, 6),  -- adet / pay / gram
+  buy_price      numeric(18, 6),  -- alış birim fiyatı (currency cinsinden)
+  last_price     numeric(18, 6),  -- güncel birim fiyat (manuel veya oto)
+  last_price_at  timestamptz,
+  price_source   text,            -- 'manual'|'tcmb'|'btcturk'|'tefas'...
   currency      text not null default 'TRY',
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
@@ -274,3 +283,40 @@ create policy "prefs self"  on public.notification_prefs for all using (member_i
 
 -- reminders_log: kendi gönderim kayıtlarını gör (yazma backend/service role'da)
 create policy "reminders read" on public.reminders_log for select using (member_id = auth.uid());
+
+-- ===========================================================================
+-- cash_flows — gelir + düzenli gider (Düzeltme Spec'i 2 §5)
+-- ===========================================================================
+create table if not exists public.cash_flows (
+  id           uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households (id) on delete cascade,
+  person_id    uuid references public.persons (id) on delete set null,
+  direction    text not null check (direction in ('income', 'expense')),
+  category     text not null,
+  label        text,
+  amount       numeric(14, 2) not null check (amount >= 0),
+  currency     text not null default 'TRY',
+  active       boolean not null default true,
+  created_at   timestamptz not null default now()
+);
+create index if not exists idx_cashflows_household on public.cash_flows (household_id);
+alter table public.cash_flows enable row level security;
+create policy "cashflows all" on public.cash_flows for all
+  using (public.is_household_member(household_id))
+  with check (public.is_household_member(household_id));
+
+-- ===========================================================================
+-- fx_rates — TCMB döviz kurları (cron yazar, kimliği doğrulanan herkes okur)
+-- ===========================================================================
+create table if not exists public.fx_rates (
+  currency         text primary key,
+  forex_buying     numeric,
+  forex_selling    numeric,
+  banknote_buying  numeric,
+  banknote_selling numeric,
+  rate_date        date not null,
+  updated_at       timestamptz not null default now()
+);
+alter table public.fx_rates enable row level security;
+create policy "fx read" on public.fx_rates for select using (auth.role() = 'authenticated');
+-- yazma yalnız service role (cron); RLS bypass eder.

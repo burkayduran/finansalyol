@@ -83,6 +83,56 @@ export function EstimateBadge() {
   return <Text style={styles.estimate}>≈ tahmini</Text>;
 }
 
+/** Genel amaçlı seçici — modal liste. (Para birimi, emtia türü vb.) */
+export function Select({
+  label,
+  value,
+  options,
+  onChange,
+  placeholder = "Seç…",
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = options.find((o) => o.value === value);
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Pressable style={styles.input} onPress={() => setOpen(true)}>
+        <Text style={{ color: current ? colors.ink : colors.muted, fontSize: 16 }}>
+          {current?.label ?? placeholder}
+        </Text>
+      </Pressable>
+      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setOpen(false)}>
+          <Pressable style={styles.modalSheet} onPress={() => {}}>
+            <Text style={[styles.fieldLabel, { fontSize: 16, marginBottom: 8 }]}>{label}</Text>
+            <FlatList
+              data={options}
+              keyExtractor={(o) => o.value}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={styles.modalRow}
+                  onPress={() => {
+                    onChange(item.value);
+                    setOpen(false);
+                  }}
+                >
+                  <Text style={{ color: colors.ink, fontSize: 16 }}>{item.label}</Text>
+                </Pressable>
+              )}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
 /**
  * Banka seçici — modal liste + "Diğer (elle yaz)" serbest metin.
  * value gerçek banka adını tutar; listede yoksa "Diğer" modu açılır.

@@ -2,7 +2,16 @@
 // schema.sql ile birebir tutulur.
 
 export type DebtKind = "credit_card" | "kmh" | "kmh_installment" | "loan";
-export type AssetKind = "cash" | "deposit" | "fund" | "other";
+export type AssetKind =
+  | "cash"
+  | "deposit"
+  | "fund"
+  | "stock"
+  | "commodity"
+  | "crypto"
+  | "other";
+
+export type CashFlowDirection = "income" | "expense";
 
 export type Profile = {
   id: string;
@@ -34,6 +43,7 @@ export type Debt = {
   bank: string;
   label: string | null;
   balance: number;
+  total_amount: number | null;
   card_limit: number | null;
   term_count: number | null;
   first_installment_date: string | null;
@@ -57,8 +67,38 @@ export type Asset = {
   term_days: number | null;
   stopaj: number | null;
   start_date: string | null;
+  symbol: string | null;
+  commodity_type: string | null;
+  quantity: number | null;
+  buy_price: number | null;
+  last_price: number | null;
+  last_price_at: string | null;
+  price_source: string | null;
   currency: string;
   created_at: string;
+  updated_at: string;
+}
+
+export type CashFlow = {
+  id: string;
+  household_id: string;
+  person_id: string | null;
+  direction: CashFlowDirection;
+  category: string;
+  label: string | null;
+  amount: number;
+  currency: string;
+  active: boolean;
+  created_at: string;
+}
+
+export type FxRate = {
+  currency: string;
+  forex_buying: number | null;
+  forex_selling: number | null;
+  banknote_buying: number | null;
+  banknote_selling: number | null;
+  rate_date: string;
   updated_at: string;
 }
 
@@ -117,6 +157,8 @@ export interface Database {
       debts: Row<Debt>;
       assets: Row<Asset>;
       payments: Row<Payment>;
+      cash_flows: Row<CashFlow>;
+      fx_rates: Row<FxRate>;
       push_tokens: Row<{
         id: string;
         member_id: string;

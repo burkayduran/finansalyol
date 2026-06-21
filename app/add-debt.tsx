@@ -4,7 +4,8 @@ import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { BankSelect, Button, Card, Field } from "@/components/ui";
-import { parseTRYInput } from "@/core/format";
+import { parseTRYInput, formatTRY } from "@/core/format";
+import { installmentsRemaining, outstandingInstallment } from "@/core/installment";
 import { colors, spacing } from "@/theme";
 import type { DebtKind, Person } from "@/lib/database.types";
 
@@ -14,6 +15,8 @@ const SEGMENTS: { key: Segment; label: string }[] = [
   { key: "kmh", label: "KMH" },
   { key: "loan", label: "Kredi" },
 ];
+
+const TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
 
 // "GG.AA.YYYY" -> Date | null
 function parseDate(s: string): Date | null {
@@ -32,7 +35,8 @@ export default function AddDebt() {
   const [segment, setSegment] = useState<Segment>("credit_card");
   const [kmhMode, setKmhMode] = useState<"normal" | "installment">("normal");
   const [bank, setBank] = useState("");
-  const [balance, setBalance] = useState("");
+  const [balance, setBalance] = useState(""); // credit_card/kmh: dönem borcu/bakiye
+  const [totalAmount, setTotalAmount] = useState(""); // loan/kmh_installment: toplam tutar
   const [cardLimit, setCardLimit] = useState("");
   const [installment, setInstallment] = useState("");
   const [termCount, setTermCount] = useState("");
@@ -48,6 +52,20 @@ export default function AddDebt() {
 
   const isInstallment = kind === "loan" || kind === "kmh_installment";
 
+  // Canlı özet: kalan taksit · ≈ kalan borç · bitiş.
+  const summary = useMemo(() => {
+    if (!isInstallment) return null;
+    const inst = parseTRYInput(installment);
+    const terms = Number(termCount);
+    const first = parseDate(firstInstallment);
+    if (!inst || !Number.isInteger(terms) || terms <= 0 || !first) return null;
+    const remaining = installmentsRemaining(first, terms);
+    const outstanding = outstandingInstallment({ installment: inst, termCount: terms, firstInstallmentDate: first });
+    const end = new Date(first);
+    end.setMonth(end.getMonth() + terms - 1);
+    return { remaining, outstanding, end };
+  }, [isInstallment, installment, termCount, firstInstallment]);
+
   useEffect(() => {
     if (!householdId) return;
     supabase
@@ -61,25 +79,32 @@ export default function AddDebt() {
   }, [householdId]);
 
   const save = async () => {
-    const balanceVal = parseTRYInput(balance);
     if (!bank.trim()) return Alert.alert("Eksik", "Banka seç.");
-    if (balanceVal == null || balanceVal <= 0) return Alert.alert("Eksik", "Borç tutarı gir.");
 
     let dueVal: number;
     let firstDate: Date | null = null;
+    let balanceToStore: number;
+    let totalToStore: number | null = null;
 
     if (isInstallment) {
+      const total = parseTRYInput(totalAmount);
       const inst = parseTRYInput(installment);
       const terms = Number(termCount);
       firstDate = parseDate(firstInstallment);
+      if (total == null || total <= 0) return Alert.alert("Eksik", "Toplam tutarı gir.");
       if (inst == null || inst <= 0) return Alert.alert("Eksik", "Aylık taksit tutarını gir.");
       if (!Number.isInteger(terms) || terms <= 0) return Alert.alert("Eksik", "Taksit sayısını gir.");
       if (!firstDate) return Alert.alert("Eksik", "İlk taksit tarihini GG.AA.YYYY gir.");
-      dueVal = firstDate.getDate(); // due_day ilk taksit gününden türer
+      dueVal = firstDate.getDate();
+      totalToStore = total;
+      balanceToStore = total; // referans; kalan borç programdan türetilir
     } else {
+      const balanceVal = parseTRYInput(balance);
       dueVal = Number(dueDay);
+      if (balanceVal == null || balanceVal <= 0) return Alert.alert("Eksik", "Borç tutarı gir.");
       if (!Number.isInteger(dueVal) || dueVal < 1 || dueVal > 31)
         return Alert.alert("Eksik", "Son ödeme gününü 1–31 arası gir.");
+      balanceToStore = balanceVal;
     }
 
     setSaving(true);
@@ -88,7 +113,8 @@ export default function AddDebt() {
       person_id: personId,
       kind,
       bank: bank.trim(),
-      balance: balanceVal,
+      balance: balanceToStore,
+      total_amount: totalToStore,
       card_limit: kind === "credit_card" ? parseTRYInput(cardLimit) : null,
       installment: isInstallment ? parseTRYInput(installment) : null,
       term_count: isInstallment ? Number(termCount) : null,
@@ -118,7 +144,6 @@ export default function AddDebt() {
           ))}
         </View>
 
-        {/* KMH alt-toggle: Normal / Taksitli */}
         {segment === "kmh" && (
           <View style={[styles.segment, { marginTop: -spacing(0.5) }]}>
             {(["normal", "installment"] as const).map((m) => (
@@ -137,14 +162,6 @@ export default function AddDebt() {
 
         <BankSelect label="Banka" value={bank} onChange={setBank} />
 
-        <Field
-          label={isInstallment ? "Kalan borç tutarı" : "Borç tutarı"}
-          value={balance}
-          onChangeText={setBalance}
-          keyboardType="numeric"
-          placeholder="örn. 71.000"
-        />
-
         {kind === "credit_card" && (
           <Field
             label="Kart limiti"
@@ -156,8 +173,16 @@ export default function AddDebt() {
           />
         )}
 
-        {isInstallment && (
+        {isInstallment ? (
           <>
+            <Field
+              label="Toplam tutar"
+              value={totalAmount}
+              onChangeText={setTotalAmount}
+              keyboardType="numeric"
+              placeholder="örn. 120.000"
+              hint="Kalan borç ve aylar bundan türetilir."
+            />
             <Field
               label="Aylık taksit"
               value={installment}
@@ -179,17 +204,34 @@ export default function AddDebt() {
               placeholder="GG.AA.YYYY"
               hint="Son ödeme günü bu tarihten türetilir."
             />
+            {summary && (
+              <View style={styles.summaryBox}>
+                <Text style={{ color: colors.ink, fontWeight: "600" }}>
+                  Kalan {summary.remaining} taksit · ≈ {formatTRY(summary.outstanding)} kalan borç
+                </Text>
+                <Text style={{ color: colors.muted, fontSize: 13 }}>
+                  Bitiş: {TR_MONTHS[summary.end.getMonth()]} {summary.end.getFullYear()}
+                </Text>
+              </View>
+            )}
           </>
-        )}
-
-        {!isInstallment && (
-          <Field
-            label="Son ödeme günü"
-            value={dueDay}
-            onChangeText={setDueDay}
-            keyboardType="numeric"
-            placeholder="1–31"
-          />
+        ) : (
+          <>
+            <Field
+              label="Borç tutarı"
+              value={balance}
+              onChangeText={setBalance}
+              keyboardType="numeric"
+              placeholder="örn. 71.000"
+            />
+            <Field
+              label="Son ödeme günü"
+              value={dueDay}
+              onChangeText={setDueDay}
+              keyboardType="numeric"
+              placeholder="1–31"
+            />
+          </>
         )}
 
         {persons.length > 0 && (
@@ -235,4 +277,10 @@ const styles = {
   },
   segActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   segText: { color: colors.inkSoft, fontWeight: "600" as const },
+  summaryBox: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: 12,
+    padding: spacing(1.5),
+    marginBottom: spacing(1),
+  },
 };

@@ -52,6 +52,19 @@ TCMB tablosu BETA: oran değişince elle güncellenir (`RATE_SOURCE.lastCheckedA
 - Edge Function Deno'dur; `src/core`'u import etmez (ayrı runtime) — kritik küçük
   mantık (asgari, tarih) fonksiyon içinde tekrarlanır. Değişirse iki yeri de güncelle.
 
+## 5.1 Varlık/fiyat & FX — manuel-önce, oto katmanlı
+
+- **Manuel-önce:** fiyatlı her varlıkta kullanıcı `buy_price`/`last_price` elle girer.
+  Oto-fiyat bunun *üstüne* eklenen katmandır; bozulsa bile kâr/zarar manuel veriyle çalışır.
+  "Oto-fiyat garantili günlük" vaadi YOK.
+- Değerleme & K/Z: `src/core/assets.ts`. FX dönüşümü TCMB **alış** (`forex_buying`).
+- Crons: `fx-cron` (TCMB today.xml → `fx_rates`, açık/güvenilir), `price-cron`
+  (kripto = BtcTurk, güvenilir; fon/hisse/altın **best-effort, izole** — biri kırılırsa
+  diğerini etkilemez). reminder-cron deseni örnek alınır.
+- Taksitli borçta **kalan borç elle girilmez**; toplam tutar + taksit + sayı + ilk
+  tarihten türetilir (`src/core/installment.ts`). Dashboard toplam/kişi/projeksiyon
+  `outstandingBalance` kullanır, ham `balance` değil.
+
 ## 6. İstemci mimarisi
 
 - **expo-router** file-based. `app/_layout.tsx` oturum + hane bekçisidir

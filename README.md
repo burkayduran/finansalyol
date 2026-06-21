@@ -55,17 +55,21 @@ app/                         # expo-router ekranları (file-based routing)
 src/
 ├── core/                    # saf hesap motoru:
 │                            #   rateConfig (TCMB tavan) · minimum (BDDK) · interest
-│                            #   deposit (mevduat getiri) · projection (taksit planı)
-│                            #   banks (TR banka listesi) · format · dates
+│                            #   installment (taksit türetme) · projection (taksit planı)
+│                            #   deposit (mevduat getiri) · assets (değerleme/K-Z)
+│                            #   cashflow (gelir-gider) · currencies · banks · format · dates
 ├── lib/                     # supabase client, db tipleri, push kaydı
 ├── hooks/useHousehold.ts    # pano verisi + türetilmiş değerler
 ├── providers/               # oturum + aktif hane bağlamı
 └── components/ · theme.ts
 supabase/
 ├── schema.sql               # tablolar + RLS (kanonik)
-├── migrations/              # 0002: mevduat getiri + taksitli KMH + taksit programı
+├── migrations/              # 0002: taksitli KMH/program · 0003: varlık türleri + FX + gelir-gider
 ├── rpc.sql                  # create_household / accept_invite / household_summary
-└── functions/reminder-cron/ # günlük hatırlatma Edge Function
+└── functions/
+    ├── reminder-cron/       # günlük hatırlatma (push + e-posta)
+    ├── fx-cron/             # TCMB döviz kurları (today.xml → fx_rates)
+    └── price-cron/          # oto-fiyat (kripto: BtcTurk; fon/hisse/altın best-effort)
 ```
 
 ## Kurulum

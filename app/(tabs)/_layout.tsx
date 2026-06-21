@@ -20,6 +20,10 @@ export default function TabsLayout() {
         options={{ title: "Pano", tabBarIcon: icon("🏠"), headerTitle: "Aile panosu" }}
       />
       <Tabs.Screen
+        name="cashflow"
+        options={{ title: "Gelir-gider", tabBarIcon: icon("📊") }}
+      />
+      <Tabs.Screen
         name="family"
         options={{ title: "Aile", tabBarIcon: icon("👪") }}
       />

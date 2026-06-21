@@ -30,7 +30,7 @@ export default function Projection() {
           installment: Number(d.installment),
           termCount: Number(d.term_count),
           firstInstallmentDate: new Date(d.first_installment_date as string),
-          balance: Number(d.balance),
+          balance: Number(d.total_amount ?? d.balance), // taksit programı toplam tutardan
         })),
     [debts]
   );

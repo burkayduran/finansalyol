@@ -7,6 +7,7 @@ import { Button, Card, Field } from "@/components/ui";
 import { formatTRY, formatPercent, parseTRYInput } from "@/core/format";
 import { daysUntilDue, formatShortDate, nextDueDate } from "@/core/dates";
 import { mandatoryMinimum } from "@/core/minimum";
+import { outstandingBalance } from "@/core/installment";
 import { minimumTrap, avoidedInterestFromExtra, type TrapVerdict } from "@/core/interest";
 import { colors, spacing } from "@/theme";
 import type { Debt } from "@/lib/database.types";
@@ -43,7 +44,14 @@ export default function DebtDetail() {
     );
   }
 
-  const balance = Number(debt.balance);
+  const balance = outstandingBalance({
+    kind: debt.kind,
+    balance: Number(debt.balance),
+    installment: debt.installment,
+    termCount: debt.term_count,
+    firstInstallmentDate: debt.first_installment_date ? new Date(debt.first_installment_date) : null,
+  });
+  const isInstallment = debt.kind === "loan" || debt.kind === "kmh_installment";
   const insightInput = {
     kind: debt.kind,
     balance,
@@ -68,9 +76,11 @@ export default function DebtDetail() {
       amount,
     });
     if (error) return Alert.alert("Olmadı", error.message);
-    // Bakiyeyi düş (basit F1 davranışı).
-    const newBalance = Math.max(0, balance - amount);
-    await supabase.from("debts").update({ balance: newBalance }).eq("id", debt.id);
+    // Kart/KMH: bakiyeyi düş. Taksitli borçlarda kalan tutar programdan türetilir,
+    // ham balance'a dokunma.
+    if (!isInstallment) {
+      await supabase.from("debts").update({ balance: Math.max(0, balance - amount) }).eq("id", debt.id);
+    }
     setPayAmount("");
     load();
   };

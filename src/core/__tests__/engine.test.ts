@@ -6,6 +6,9 @@ import { minimumTrap, avoidedInterestFromExtra } from "../interest";
 import { daysUntilDue } from "../dates";
 import { depositYield } from "../deposit";
 import { projectMonths } from "../projection";
+import { installmentsPaid, outstandingInstallment, outstandingBalance } from "../installment";
+import { assetValueTRY, assetPnlTRY, assetNativeValue } from "../assets";
+import { projectCashflow } from "../cashflow";
 
 describe("format", () => {
   it("parses tr-TR money strings", () => {
@@ -146,5 +149,72 @@ describe("daysUntilDue", () => {
     expect(daysUntilDue(19, today)).toBe(5);
     expect(daysUntilDue(14, today)).toBe(0);
     expect(daysUntilDue(1, today)).toBeGreaterThan(0);
+  });
+});
+
+describe("installment derivation (§1)", () => {
+  it("counts installments paid (first installment inclusive)", () => {
+    const first = new Date(2026, 0, 15); // 15 Oca 2026
+    expect(installmentsPaid(first, 12, new Date(2026, 0, 14))).toBe(0); // gününden önce
+    expect(installmentsPaid(first, 12, new Date(2026, 0, 15))).toBe(1); // ilk taksit günü
+    expect(installmentsPaid(first, 12, new Date(2026, 3, 20))).toBe(4); // Nisan
+    expect(installmentsPaid(first, 12, new Date(2030, 0, 1))).toBe(12); // termCount ile sınırlı
+  });
+  it("derives outstanding from remaining installments", () => {
+    const d = { installment: 5000, termCount: 10, firstInstallmentDate: new Date(2026, 0, 15) };
+    // Mart 2026'da 3 taksit ödenmiş -> 7 kaldı -> 35.000
+    expect(outstandingInstallment(d, new Date(2026, 2, 15))).toBe(35000);
+  });
+  it("outstandingBalance uses raw balance for card/kmh, derived for installment", () => {
+    expect(outstandingBalance({ kind: "credit_card", balance: 71000 })).toBe(71000);
+    expect(
+      outstandingBalance(
+        {
+          kind: "loan",
+          balance: 0,
+          installment: 5000,
+          termCount: 10,
+          firstInstallmentDate: new Date(2026, 0, 15),
+        },
+        new Date(2026, 2, 15)
+      )
+    ).toBe(35000);
+  });
+});
+
+describe("asset valuation & P/L (§2)", () => {
+  it("values priced assets by quantity × (last ?? buy) × fx", () => {
+    expect(assetNativeValue({ kind: "stock", balance: 0, quantity: 10, buyPrice: 100, lastPrice: 130 })).toBe(1300);
+    // fx: USD hissesi, 1 USD = 33 TRY
+    expect(assetValueTRY({ kind: "stock", balance: 0, quantity: 10, buyPrice: 100, lastPrice: 130 }, 33)).toBe(42900);
+  });
+  it("falls back to buy price when last price missing", () => {
+    expect(assetNativeValue({ kind: "crypto", balance: 0, quantity: 2, buyPrice: 50000, lastPrice: null })).toBe(100000);
+  });
+  it("computes P/L only when last price exists", () => {
+    expect(assetPnlTRY({ kind: "commodity", balance: 0, quantity: 100, buyPrice: 40, lastPrice: 52 })).toBe(1200);
+    expect(assetPnlTRY({ kind: "commodity", balance: 0, quantity: 100, buyPrice: 40, lastPrice: null })).toBeNull();
+    expect(assetPnlTRY({ kind: "cash", balance: 1000 })).toBeNull();
+  });
+});
+
+describe("cashflow projection (§5)", () => {
+  it("nets income minus recurring expense minus debt due per month", () => {
+    const rows = projectCashflow(
+      [50000], // maaş
+      [12000], // kira gideri
+      [
+        { kind: "credit_card", monthlyMinimum: 8000 },
+        { kind: "loan", installment: 7000, termCount: 2, firstInstallmentDate: new Date(2026, 5, 10) },
+      ],
+      3,
+      new Date(2026, 5, 1) // Haz
+    );
+    // Haz & Tem: taksit aktif -> debtDue = 8000 + 7000 = 15000 ; net = 50000-12000-15000 = 23000
+    expect(rows[0].debtDue).toBe(15000);
+    expect(rows[0].net).toBe(23000);
+    // Ağu: taksit bitti -> debtDue = 8000 ; net = 30000
+    expect(rows[2].debtDue).toBe(8000);
+    expect(rows[2].net).toBe(30000);
   });
 });
