@@ -8,6 +8,8 @@ import { parseTRYInput, formatTRY } from "@/core/format";
 import { formatShortDate } from "@/core/dates";
 import { depositYield } from "@/core/deposit";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@/core/currencies";
+import { toTRY } from "@/core/fx";
+import { useFxRates } from "@/hooks/useFxRates";
 import { colors, spacing } from "@/theme";
 import type { AssetKind } from "@/lib/database.types";
 
@@ -49,9 +51,21 @@ export default function AddAsset() {
   const [lastPrice, setLastPrice] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const fxRates = useFxRates();
   const isDeposit = kind === "deposit";
   const isPriced = kind === "fund" || kind === "stock" || kind === "commodity" || kind === "crypto";
   const isCash = kind === "cash";
+  const isOther = kind === "other";
+  // Para birimi yalnız: nakit, diğer, hisse, kripto. Fon/mevduat/emtia = TRY.
+  const showCurrency = isCash || isOther || kind === "stock" || kind === "crypto";
+
+  // Yabancı para nakit/diğer için TRY önizleme.
+  const fxPreview = useMemo(() => {
+    if (!(isCash || isOther) || currency === "TRY") return null;
+    const amt = parseTRYInput(balance);
+    if (!amt) return null;
+    return { value: toTRY(amt, currency, fxRates), rateDate: fxRates[currency]?.rate_date };
+  }, [isCash, isOther, currency, balance, fxRates]);
 
   const depositPreview = useMemo(() => {
     if (!isDeposit) return null;
@@ -85,7 +99,7 @@ export default function AddAsset() {
       household_id: householdId!,
       label: label.trim(),
       kind,
-      currency,
+      currency: showCurrency ? currency : "TRY", // fon/mevduat/emtia → TRY
       balance: balanceVal,
       annual_rate: isDeposit ? parseTRYInput(annualRate) : null,
       term_days: isDeposit && termDays ? Number(termDays) : null,
@@ -107,7 +121,12 @@ export default function AddAsset() {
   return (
     <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
       <Card>
-        <Field label="Etiket" value={label} onChangeText={setLabel} placeholder="örn. Acil fon" />
+        <Field
+          label="Etiket"
+          value={label}
+          onChangeText={setLabel}
+          placeholder={isOther ? "Açıklama (örn. Altın bilezik, ev eşyası)" : "örn. Acil fon"}
+        />
         <Text style={styles.label}>Tür</Text>
         <View style={styles.segment}>
           {KINDS.map((k) => (
@@ -132,9 +151,18 @@ export default function AddAsset() {
           />
         )}
 
-        {/* nakit: para birimi */}
-        {isCash && (
-          <Select label="Para birimi" value={currency} options={currencyOptions} onChange={setCurrency} />
+        {/* nakit / diğer: para birimi + yabancıysa TRY önizleme */}
+        {(isCash || isOther) && (
+          <>
+            <Select label="Para birimi" value={currency} options={currencyOptions} onChange={setCurrency} />
+            {currency !== "TRY" && (
+              <Text style={{ color: colors.muted, fontSize: 13, marginTop: -spacing(0.5), marginBottom: spacing(1) }}>
+                {fxPreview?.value != null
+                  ? `≈ ${formatTRY(fxPreview.value)} · TCMB ${fxPreview.rateDate ?? ""} alış kuru`
+                  : "Kur henüz çekilmedi"}
+              </Text>
+            )}
+          </>
         )}
 
         {/* mevduat */}
@@ -187,7 +215,7 @@ export default function AddAsset() {
               placeholder="boşsa alış fiyatı kullanılır"
               hint="Manuel girebilirsin; desteklenen türlerde oto-fiyat bunu günceller."
             />
-            {kind !== "commodity" && (
+            {(kind === "stock" || kind === "crypto") && (
               <Select label="Para birimi" value={currency} options={currencyOptions} onChange={setCurrency} />
             )}
           </>

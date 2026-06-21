@@ -7,7 +7,7 @@ import { mandatoryMinimum } from "@/core/minimum";
 import { daysUntilDue } from "@/core/dates";
 import { outstandingBalance } from "@/core/installment";
 import { assetValueTRY, assetPnlTRY } from "@/core/assets";
-import { projectCashflow, type CashflowDebt } from "@/core/cashflow";
+import { projectCashflow, type CashflowDebt, type CashflowEntry } from "@/core/cashflow";
 
 const DAY_MS = 86400000;
 
@@ -150,12 +150,12 @@ export function useHousehold(): HouseholdData {
   const totalAsset = assetViews.reduce((s, v) => s + v.valueTRY, 0);
 
   // Bu ayın net'i (gelir-gider projeksiyonu ilk ayı).
-  const incomes = cashFlows
-    .filter((c) => c.direction === "income")
-    .map((c) => Number(c.amount) * fxRateFor(c.currency));
-  const expenses = cashFlows
-    .filter((c) => c.direction === "expense")
-    .map((c) => Number(c.amount) * fxRateFor(c.currency));
+  const cashflowEntries: CashflowEntry[] = cashFlows.map((c) => ({
+    amount: Number(c.amount) * fxRateFor(c.currency),
+    direction: c.direction,
+    recurrence: c.recurrence,
+    occurredOn: c.occurred_on ? new Date(c.occurred_on) : undefined,
+  }));
   const cashflowDebts: CashflowDebt[] = debts.map((d) => ({
     kind: d.kind,
     monthlyMinimum: mandatoryMinimum({
@@ -171,7 +171,7 @@ export function useHousehold(): HouseholdData {
       ? new Date(d.first_installment_date)
       : undefined,
   }));
-  const monthlyNet = projectCashflow(incomes, expenses, cashflowDebts, 1)[0]?.net ?? 0;
+  const monthlyNet = projectCashflow(cashflowEntries, cashflowDebts, 1)[0]?.net ?? 0;
 
   const upcoming: UpcomingPayment[] = debts
     .map((debt) => ({

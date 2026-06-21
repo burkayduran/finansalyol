@@ -296,6 +296,8 @@ create table if not exists public.cash_flows (
   label        text,
   amount       numeric(14, 2) not null check (amount >= 0),
   currency     text not null default 'TRY',
+  recurrence   text not null default 'monthly' check (recurrence in ('monthly', 'one_time')),
+  occurred_on  date,             -- one_time için (hangi ay)
   active       boolean not null default true,
   created_at   timestamptz not null default now()
 );

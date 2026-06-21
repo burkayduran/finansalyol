@@ -76,7 +76,7 @@ export default function Dashboard() {
             Bir borç ya da birikim ekleyince pano canlanır. Sonra aileni davet edebilirsin.
           </Text>
           <Button title="Borç ekle" onPress={() => router.push("/add-debt")} />
-          <Button title="Birikim ekle" variant="ghost" onPress={() => router.push("/add-asset")} />
+          <Button title="Varlık ekle" variant="ghost" onPress={() => router.push("/add-asset")} />
         </Card>
       )}
 
@@ -173,7 +173,7 @@ export default function Dashboard() {
       {!empty && (
         <View style={{ marginTop: spacing(1) }}>
           <Button title="+ Borç ekle" onPress={() => router.push("/add-debt")} />
-          <Button title="+ Birikim ekle" variant="ghost" onPress={() => router.push("/add-asset")} />
+          <Button title="+ Varlık ekle" variant="ghost" onPress={() => router.push("/add-asset")} />
         </View>
       )}
     </ScrollView>

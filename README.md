@@ -64,7 +64,7 @@ src/
 └── components/ · theme.ts
 supabase/
 ├── schema.sql               # tablolar + RLS (kanonik)
-├── migrations/              # 0002: taksitli KMH/program · 0003: varlık türleri + FX + gelir-gider
+├── migrations/              # 0002: taksitli KMH · 0003: varlık türleri+FX+gelir-gider · 0004: tek seferlik akış
 ├── rpc.sql                  # create_household / accept_invite / household_summary
 └── functions/
     ├── reminder-cron/       # günlük hatırlatma (push + e-posta)

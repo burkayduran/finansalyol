@@ -1,4 +1,13 @@
-// Aylık gelir-gider projeksiyonu. net = gelir − (düzenli gider + o ayın borç yükümlülüğü).
+// Aylık gelir-gider projeksiyonu. net = gelir − (gider + o ayın borç yükümlülüğü).
+// Gelir/gider kalemleri aylık tekrar eden VEYA tek seferlik olabilir.
+
+export interface CashflowEntry {
+  amount: number;
+  direction: "income" | "expense";
+  recurrence: "monthly" | "one_time";
+  /** one_time için: hangi ayda sayılacağı. */
+  occurredOn?: Date;
+}
 
 export interface CashflowDebt {
   kind: "credit_card" | "kmh" | "kmh_installment" | "loan";
@@ -13,7 +22,7 @@ export interface CashflowDebt {
 export interface MonthlyFlow {
   month: Date;
   income: number;
-  recurringExpense: number;
+  expense: number;
   debtDue: number;
   net: number;
 }
@@ -36,34 +45,40 @@ function debtDueAt(debt: CashflowDebt, idx: number): number {
   return debt.monthlyMinimum ?? 0;
 }
 
+/** Bir kalemin belirli ay-indeksindeki katkısı (monthly her ay, one_time yalnız kendi ayı). */
+function entryAt(entry: CashflowEntry, idx: number): number {
+  if (entry.recurrence === "monthly") return entry.amount;
+  if (entry.occurredOn && monthIndex(entry.occurredOn) === idx) return entry.amount;
+  return 0;
+}
+
 /**
  * `from`'dan başlayarak `months` ay için gelir-gider projeksiyonu.
- * incomes/expenses: aylık tekrar eden tutar listeleri (currency=TRY varsayımı; FX
- * dönüşümü çağırandan gelir).
+ * Tutarlar TRY varsayımıyla gelir (FX dönüşümü çağırandan).
  */
 export function projectCashflow(
-  incomes: number[],
-  expenses: number[],
+  entries: CashflowEntry[],
   debts: CashflowDebt[],
   months = 12,
   from: Date = new Date()
 ): MonthlyFlow[] {
-  const income = incomes.reduce((s, x) => s + x, 0);
-  const recurringExpense = expenses.reduce((s, x) => s + x, 0);
   const fromIdx = monthIndex(from);
   const result: MonthlyFlow[] = [];
 
   for (let k = 0; k < months; k++) {
     const idx = fromIdx + k;
     const monthDate = new Date(Math.floor(idx / 12), idx % 12, 1);
+
+    let income = 0;
+    let expense = 0;
+    for (const e of entries) {
+      const v = entryAt(e, idx);
+      if (e.direction === "income") income += v;
+      else expense += v;
+    }
     const debtDue = debts.reduce((s, d) => s + debtDueAt(d, idx), 0);
-    result.push({
-      month: monthDate,
-      income,
-      recurringExpense,
-      debtDue,
-      net: income - recurringExpense - debtDue,
-    });
+
+    result.push({ month: monthDate, income, expense, debtDue, net: income - expense - debtDue });
   }
   return result;
 }

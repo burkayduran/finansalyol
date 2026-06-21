@@ -88,6 +88,8 @@ export type CashFlow = {
   label: string | null;
   amount: number;
   currency: string;
+  recurrence: "monthly" | "one_time";
+  occurred_on: string | null;
   active: boolean;
   created_at: string;
 }

@@ -4,7 +4,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
 import { mandatoryMinimum } from "@/core/minimum";
-import { projectCashflow, type CashflowDebt } from "@/core/cashflow";
+import { projectCashflow, type CashflowDebt, type CashflowEntry } from "@/core/cashflow";
 import { formatTRY } from "@/core/format";
 import { colors, spacing } from "@/theme";
 
@@ -17,12 +17,12 @@ export default function Cashflow() {
   useFocusEffect(useCallback(() => { data.reload(); }, [data.reload]));
 
   const rows = useMemo(() => {
-    const incomes = data.cashFlows
-      .filter((c) => c.direction === "income")
-      .map((c) => Number(c.amount) * data.fxRateFor(c.currency));
-    const expenses = data.cashFlows
-      .filter((c) => c.direction === "expense")
-      .map((c) => Number(c.amount) * data.fxRateFor(c.currency));
+    const entries: CashflowEntry[] = data.cashFlows.map((c) => ({
+      amount: Number(c.amount) * data.fxRateFor(c.currency),
+      direction: c.direction,
+      recurrence: c.recurrence,
+      occurredOn: c.occurred_on ? new Date(c.occurred_on) : undefined,
+    }));
     const debts: CashflowDebt[] = data.debts.map((d) => ({
       kind: d.kind,
       monthlyMinimum: mandatoryMinimum({
@@ -36,7 +36,7 @@ export default function Cashflow() {
       termCount: d.term_count ?? undefined,
       firstInstallmentDate: d.first_installment_date ? new Date(d.first_installment_date) : undefined,
     }));
-    return projectCashflow(incomes, expenses, debts, 12);
+    return projectCashflow(entries, debts, 12);
   }, [data.cashFlows, data.debts, data.fxRateFor, data.debtOutstanding]);
 
   const hasData = data.cashFlows.length > 0 || data.debts.length > 0;
@@ -58,10 +58,10 @@ export default function Cashflow() {
 
       <View style={{ flexDirection: "row", gap: 8, marginBottom: spacing(1) }}>
         <View style={{ flex: 1 }}>
-          <Button title="+ Gelir" onPress={() => router.push("/add-cashflow?direction=income")} />
+          <Button title="+ Gelir ekle" onPress={() => router.push("/add-cashflow?direction=income")} />
         </View>
         <View style={{ flex: 1 }}>
-          <Button title="+ Gider" variant="ghost" onPress={() => router.push("/add-cashflow?direction=expense")} />
+          <Button title="+ Gider ekle" variant="ghost" onPress={() => router.push("/add-cashflow?direction=expense")} />
         </View>
       </View>
 
@@ -80,7 +80,7 @@ export default function Cashflow() {
               </Text>
               <Text style={[styles.cell, styles.num, { color: colors.asset }]}>{formatTRY(r.income)}</Text>
               <Text style={[styles.cell, styles.num, { color: colors.inkSoft }]}>
-                {formatTRY(r.recurringExpense + r.debtDue)}
+                {formatTRY(r.expense + r.debtDue)}
               </Text>
               <Text style={[styles.cell, styles.num, { color: r.net < 0 ? colors.danger : colors.ink, fontWeight: "700" }]}>
                 {formatTRY(r.net)}

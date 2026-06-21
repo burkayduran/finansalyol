@@ -201,8 +201,10 @@ describe("asset valuation & P/L (§2)", () => {
 describe("cashflow projection (§5)", () => {
   it("nets income minus recurring expense minus debt due per month", () => {
     const rows = projectCashflow(
-      [50000], // maaş
-      [12000], // kira gideri
+      [
+        { amount: 50000, direction: "income", recurrence: "monthly" }, // maaş
+        { amount: 12000, direction: "expense", recurrence: "monthly" }, // kira gideri
+      ],
       [
         { kind: "credit_card", monthlyMinimum: 8000 },
         { kind: "loan", installment: 7000, termCount: 2, firstInstallmentDate: new Date(2026, 5, 10) },
@@ -216,5 +218,20 @@ describe("cashflow projection (§5)", () => {
     // Ağu: taksit bitti -> debtDue = 8000 ; net = 30000
     expect(rows[2].debtDue).toBe(8000);
     expect(rows[2].net).toBe(30000);
+  });
+
+  it("counts one-time entries only in their month", () => {
+    const rows = projectCashflow(
+      [
+        { amount: 40000, direction: "income", recurrence: "monthly" },
+        { amount: 10000, direction: "income", recurrence: "one_time", occurredOn: new Date(2026, 6, 5) }, // Tem temettü
+      ],
+      [],
+      3,
+      new Date(2026, 5, 1) // Haz
+    );
+    expect(rows[0].income).toBe(40000); // Haz: yalnız maaş
+    expect(rows[1].income).toBe(50000); // Tem: maaş + tek seferlik
+    expect(rows[2].income).toBe(40000); // Ağu: yalnız maaş
   });
 });
