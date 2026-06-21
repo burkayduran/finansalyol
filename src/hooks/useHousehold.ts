@@ -6,6 +6,36 @@ import type { Asset, Debt, Person } from "@/lib/database.types";
 import { mandatoryMinimum } from "@/core/minimum";
 import { daysUntilDue } from "@/core/dates";
 
+const DAY_MS = 86400000;
+
+/**
+ * Borcun bir sonraki ödeme gününe kalan gün. Taksit programı varsa GERÇEK taksit
+ * tarihini kullanır (sadece due_day değil). Program bittiyse null döner.
+ */
+function nextDueDays(debt: Debt): number | null {
+  if (
+    (debt.kind === "loan" || debt.kind === "kmh_installment") &&
+    debt.first_installment_date &&
+    debt.term_count != null
+  ) {
+    const first = new Date(debt.first_installment_date);
+    const last = new Date(first);
+    last.setMonth(last.getMonth() + Number(debt.term_count) - 1);
+    const today = new Date();
+    const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    // Bugünden sonraki ilk taksit tarihini bul (ay-ay ilerleyerek).
+    let next = new Date(first.getFullYear(), first.getMonth(), first.getDate());
+    while (next < t0) {
+      if (next > last) return null; // program bitti
+      next.setMonth(next.getMonth() + 1);
+    }
+    if (next > last && first < t0) return null;
+    return Math.round((next.getTime() - t0.getTime()) / DAY_MS);
+  }
+  return daysUntilDue(debt.due_day);
+}
+
 export interface UpcomingPayment {
   debt: Debt;
   days: number;
@@ -67,7 +97,7 @@ export function useHousehold(): HouseholdData {
   const upcoming: UpcomingPayment[] = debts
     .map((debt) => ({
       debt,
-      days: daysUntilDue(debt.due_day),
+      days: nextDueDays(debt),
       minimum: mandatoryMinimum({
         kind: debt.kind,
         balance: Number(debt.balance),
@@ -76,8 +106,9 @@ export function useHousehold(): HouseholdData {
         userMinimum: debt.user_minimum,
       }),
     }))
-    .sort((a, b) => a.days - b.days)
-    .slice(0, 5);
+    .filter((x) => x.days != null)
+    .sort((a, b) => (a.days as number) - (b.days as number))
+    .slice(0, 5) as UpcomingPayment[];
 
   const byPerson: PersonBreakdown[] = persons.map((person) => ({
     person,

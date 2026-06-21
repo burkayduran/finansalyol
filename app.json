@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0f766e"
+      "backgroundColor": "#233056"
     },
     "ios": {
       "supportsTablet": true,
@@ -20,7 +20,7 @@
       "package": "com.borctakip.aile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0f766e"
+        "backgroundColor": "#233056"
       },
       "useNextNotificationsApi": true
     },
@@ -33,7 +33,7 @@
       [
         "expo-notifications",
         {
-          "color": "#0f766e"
+          "color": "#233056"
         }
       ]
     ],

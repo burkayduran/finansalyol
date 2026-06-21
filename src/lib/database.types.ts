@@ -1,7 +1,7 @@
 // Supabase tablo tipleri (el yazımı; üretimde `supabase gen types` ile yenilenebilir).
 // schema.sql ile birebir tutulur.
 
-export type DebtKind = "credit_card" | "kmh" | "loan";
+export type DebtKind = "credit_card" | "kmh" | "kmh_installment" | "loan";
 export type AssetKind = "cash" | "deposit" | "fund" | "other";
 
 export type Profile = {
@@ -35,6 +35,8 @@ export type Debt = {
   label: string | null;
   balance: number;
   card_limit: number | null;
+  term_count: number | null;
+  first_installment_date: string | null;
   installment: number | null;
   due_day: number;
   user_monthly_rate: number | null;
@@ -51,6 +53,10 @@ export type Asset = {
   label: string;
   kind: AssetKind;
   balance: number;
+  annual_rate: number | null;
+  term_days: number | null;
+  stopaj: number | null;
+  start_date: string | null;
   currency: string;
   created_at: string;
   updated_at: string;

@@ -31,10 +31,14 @@ export function mandatoryMinimum(input: MinimumInput): number {
   let base = 0;
   if (input.kind === "credit_card" && input.cardLimit != null) {
     base = Math.min(input.balance, input.balance * bddkMinimumRate(input.cardLimit));
-  } else if (input.kind === "loan" && input.installment != null) {
+  } else if (
+    (input.kind === "loan" || input.kind === "kmh_installment") &&
+    input.installment != null
+  ) {
+    // Taksitli KMH, kredi gibi davranır: zorunlu = taksit.
     base = Math.min(input.balance, input.installment);
   } else if (input.kind === "kmh") {
-    base = 0;
+    base = 0; // normal/rotatif KMH: regüle asgarisi yok
   }
   if (input.userMinimum != null && input.userMinimum > base) {
     base = Math.min(input.balance, input.userMinimum);

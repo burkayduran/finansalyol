@@ -119,12 +119,14 @@ create table if not exists public.debts (
   id                 uuid primary key default gen_random_uuid(),
   household_id       uuid not null references public.households (id) on delete cascade,
   person_id          uuid references public.persons (id) on delete set null,
-  kind               text not null check (kind in ('credit_card', 'kmh', 'loan')),
+  kind               text not null check (kind in ('credit_card', 'kmh', 'kmh_installment', 'loan')),
   bank               text not null,
   label              text,
   balance            numeric(14, 2) not null default 0,
   card_limit         numeric(14, 2),
   installment        numeric(14, 2),
+  term_count             int,             -- toplam taksit sayısı (loan / kmh_installment)
+  first_installment_date date,            -- ilk taksit tarihi (due_day buradan türer)
   due_day            int not null check (due_day between 1 and 31),
   user_monthly_rate  numeric(6, 5),       -- kullanıcı oranı; fallback'i ezer
   user_minimum       numeric(14, 2),
@@ -143,7 +145,11 @@ create table if not exists public.assets (
   person_id     uuid references public.persons (id) on delete set null,
   label         text not null,
   kind          text not null default 'cash' check (kind in ('cash', 'deposit', 'fund', 'other')),
-  balance       numeric(14, 2) not null default 0,
+  balance       numeric(14, 2) not null default 0,  -- mevduatta = anapara
+  annual_rate   numeric(6, 3),   -- yıllık faiz %, mevduat
+  term_days     int,             -- vade (gün), mevduat
+  stopaj        numeric(5, 2),   -- stopaj %, mevduat
+  start_date    date,            -- başlangıç tarihi, mevduat
   currency      text not null default 'TRY',
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()

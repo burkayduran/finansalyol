@@ -4,6 +4,8 @@ import { Link, useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
 import { formatTRY } from "@/core/format";
+import { formatShortDate } from "@/core/dates";
+import { depositYield } from "@/core/deposit";
 import { colors, spacing } from "@/theme";
 
 export default function Dashboard() {
@@ -27,22 +29,30 @@ export default function Dashboard() {
       contentContainerStyle={{ padding: spacing(2) }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {/* Net durum kartı — panonun kalbi */}
-      <Card style={{ backgroundColor: colors.primary }}>
-        <Text style={{ color: "#cbeae6", fontSize: 14 }}>Net durum</Text>
-        <Text style={{ color: "#fff", fontSize: 34, fontWeight: "800", marginVertical: 4 }}>
+      {/* Net durum kartı — sade beyaz kart; marka rengi büyük alanı boyamaz */}
+      <Card>
+        <Text style={{ color: colors.inkSoft, fontSize: 14 }}>Net durum</Text>
+        <Text
+          style={{
+            color: data.net < 0 ? colors.danger : colors.ink,
+            fontSize: 34,
+            fontWeight: "800",
+            marginVertical: 4,
+          }}
+        >
           {formatTRY(data.net)}
         </Text>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: spacing(1) }}>
+        <View style={{ height: 2, backgroundColor: colors.accent, width: 48, borderRadius: 2, marginVertical: spacing(1) }} />
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <View>
-            <Text style={{ color: "#cbeae6", fontSize: 13 }}>Toplam borç</Text>
-            <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700" }}>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>Toplam borç</Text>
+            <Text style={{ color: colors.debt, fontSize: 18, fontWeight: "700" }}>
               {formatTRY(data.totalDebt)}
             </Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ color: "#cbeae6", fontSize: 13 }}>Toplam birikim</Text>
-            <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700" }}>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>Toplam birikim</Text>
+            <Text style={{ color: colors.asset, fontSize: 18, fontWeight: "700" }}>
               {formatTRY(data.totalAsset)}
             </Text>
           </View>
@@ -72,6 +82,48 @@ export default function Dashboard() {
               <Text style={{ color: colors.debt, fontWeight: "700" }}>{formatTRY(b.totalDebt)}</Text>
             </View>
           ))}
+        </Card>
+      )}
+
+      {/* Birikimler (mevduatta vade sonu alt metni) */}
+      {data.assets.length > 0 && (
+        <Card>
+          <Text style={styles.section}>Birikimler</Text>
+          {data.assets.map((a) => {
+            const dep =
+              a.kind === "deposit" && a.annual_rate != null && a.term_days != null
+                ? depositYield({
+                    principal: Number(a.balance),
+                    annualRate: Number(a.annual_rate),
+                    termDays: Number(a.term_days),
+                    stopaj: Number(a.stopaj ?? 0),
+                    startDate: a.start_date ? new Date(a.start_date) : undefined,
+                  })
+                : null;
+            return (
+              <View key={a.id} style={styles.row}>
+                <View>
+                  <Text style={{ color: colors.ink, fontWeight: "600" }}>{a.label}</Text>
+                  {dep && (
+                    <Text style={{ color: colors.muted, fontSize: 13 }}>
+                      Vade sonu ≈ {formatTRY(dep.maturityValue)} · {formatShortDate(dep.maturityDate)}
+                    </Text>
+                  )}
+                </View>
+                <Text style={{ color: colors.asset, fontWeight: "700" }}>{formatTRY(Number(a.balance))}</Text>
+              </View>
+            );
+          })}
+        </Card>
+      )}
+
+      {/* Gelecek aylar (taksit projeksiyonu) giriş noktası */}
+      {data.debts.some((d) => d.kind === "loan" || d.kind === "kmh_installment") && (
+        <Card>
+          <Pressable style={[styles.row, { borderTopWidth: 0 }]} onPress={() => router.push("/projection")}>
+            <Text style={{ color: colors.ink, fontWeight: "600" }}>Gelecek aylar</Text>
+            <Text style={{ color: colors.primary, fontWeight: "700" }}>12 aylık plan →</Text>
+          </Pressable>
         </Card>
       )}
 

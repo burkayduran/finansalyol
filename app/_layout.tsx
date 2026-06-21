@@ -48,6 +48,7 @@ function RootNavigator() {
       <Stack.Screen name="add-debt" options={{ presentation: "modal", headerShown: true, title: "Borç ekle" }} />
       <Stack.Screen name="add-asset" options={{ presentation: "modal", headerShown: true, title: "Varlık ekle" }} />
       <Stack.Screen name="debt/[id]" options={{ headerShown: true, title: "Borç" }} />
+      <Stack.Screen name="projection" options={{ headerShown: true, title: "Gelecek aylar" }} />
     </Stack>
   );
 }

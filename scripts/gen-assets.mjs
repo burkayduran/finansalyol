@@ -51,9 +51,9 @@ function solidPng(width, height, [r, g, b]) {
 }
 
 mkdirSync("assets", { recursive: true });
-const teal = [15, 118, 110];
-writeFileSync("assets/icon.png", solidPng(1024, 1024, teal));
-writeFileSync("assets/adaptive-icon.png", solidPng(1024, 1024, teal));
-writeFileSync("assets/splash.png", solidPng(1242, 2436, teal));
-writeFileSync("assets/favicon.png", solidPng(48, 48, teal));
+const navy = [35, 48, 86]; // #233056 — marka rengi
+writeFileSync("assets/icon.png", solidPng(1024, 1024, navy));
+writeFileSync("assets/adaptive-icon.png", solidPng(1024, 1024, navy));
+writeFileSync("assets/splash.png", solidPng(1242, 2436, navy));
+writeFileSync("assets/favicon.png", solidPng(48, 48, navy));
 console.log("assets üretildi: icon, adaptive-icon, splash, favicon");

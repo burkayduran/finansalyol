@@ -53,13 +53,17 @@ app/                         # expo-router ekranları (file-based routing)
 ├── debt/[id].tsx            # borç detay + İçgörü sekmesi (asgari tuzağı)
 └── (tabs)/                  # Pano · Aile · Ayarlar
 src/
-├── core/                    # saf hesap motoru (TCMB tavan, BDDK asgari, faiz, tarih)
+├── core/                    # saf hesap motoru:
+│                            #   rateConfig (TCMB tavan) · minimum (BDDK) · interest
+│                            #   deposit (mevduat getiri) · projection (taksit planı)
+│                            #   banks (TR banka listesi) · format · dates
 ├── lib/                     # supabase client, db tipleri, push kaydı
 ├── hooks/useHousehold.ts    # pano verisi + türetilmiş değerler
 ├── providers/               # oturum + aktif hane bağlamı
 └── components/ · theme.ts
 supabase/
-├── schema.sql               # tablolar + RLS
+├── schema.sql               # tablolar + RLS (kanonik)
+├── migrations/              # 0002: mevduat getiri + taksitli KMH + taksit programı
 ├── rpc.sql                  # create_household / accept_invite / household_summary
 └── functions/reminder-cron/ # günlük hatırlatma Edge Function
 ```

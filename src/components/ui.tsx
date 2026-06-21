@@ -1,7 +1,9 @@
 // Paylaşılan küçük UI parçaları (sıcak ve az; iç prensipler ekrana yazılmaz).
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
+  FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -10,6 +12,7 @@ import {
   type TextInputProps,
 } from "react-native";
 import { colors, radius, spacing } from "@/theme";
+import { BANKS, OTHER_BANK } from "@/core/banks";
 
 export function Card({ children, style }: { children: ReactNode; style?: object }) {
   return <View style={[styles.card, style]}>{children}</View>;
@@ -80,6 +83,77 @@ export function EstimateBadge() {
   return <Text style={styles.estimate}>≈ tahmini</Text>;
 }
 
+/**
+ * Banka seçici — modal liste + "Diğer (elle yaz)" serbest metin.
+ * value gerçek banka adını tutar; listede yoksa "Diğer" modu açılır.
+ */
+export function BankSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [other, setOther] = useState(value !== "" && !BANKS.includes(value));
+
+  const pick = (bank: string) => {
+    if (bank === OTHER_BANK) {
+      setOther(true);
+      onChange("");
+    } else {
+      setOther(false);
+      onChange(bank);
+    }
+    setOpen(false);
+  };
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Pressable style={styles.input} onPress={() => setOpen(true)}>
+        <Text style={{ color: value || other ? colors.ink : colors.muted, fontSize: 16 }}>
+          {value || (other ? "Diğer — elle yaz" : "Banka seç…")}
+        </Text>
+      </Pressable>
+
+      {other && (
+        <TextInput
+          placeholder="Banka adını yaz"
+          placeholderTextColor={colors.muted}
+          style={[styles.input, { marginTop: 8 }]}
+          value={value}
+          onChangeText={onChange}
+        />
+      )}
+
+      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setOpen(false)}>
+          <Pressable style={styles.modalSheet} onPress={() => {}}>
+            <Text style={[styles.fieldLabel, { fontSize: 16, marginBottom: 8 }]}>Banka seç</Text>
+            <FlatList
+              data={[...BANKS, OTHER_BANK]}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={styles.modalRow}
+                  onPress={() => pick(item)}
+                >
+                  <Text style={{ color: item === OTHER_BANK ? colors.primary : colors.ink, fontSize: 16 }}>
+                    {item}
+                  </Text>
+                </Pressable>
+              )}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
 export const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
@@ -115,4 +189,13 @@ export const styles = StyleSheet.create({
   },
   hint: { color: colors.muted, fontSize: 13, marginTop: 4 },
   estimate: { color: colors.muted, fontSize: 12, fontWeight: "600" },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius,
+    borderTopRightRadius: radius,
+    padding: spacing(2),
+    maxHeight: "70%",
+  },
+  modalRow: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.line },
 });

@@ -180,6 +180,6 @@ const styles = {
     backgroundColor: colors.bg,
     alignItems: "center" as const,
   },
-  tabActive: { backgroundColor: "#d1fae5", borderColor: colors.primary },
+  tabActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   tabText: { fontWeight: "700" as const, color: colors.inkSoft },
 };
