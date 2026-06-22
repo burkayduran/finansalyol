@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { Button, Card, Field, Select } from "@/components/ui";
@@ -15,13 +15,19 @@ const CATEGORIES: Record<CashFlowDirection, { value: string; label: string }[]> 
   income: [
     { value: "salary", label: "Maaş" },
     { value: "rent", label: "Kira geliri" },
-    { value: "interest", label: "Faiz geliri" },
+    { value: "dividend", label: "Faiz/temettü" },
+    { value: "freelance", label: "Serbest/ek iş" },
+    { value: "bonus", label: "Prim/ikramiye" },
     { value: "other", label: "Diğer" },
   ],
   expense: [
-    { value: "rent", label: "Kira gideri" },
+    { value: "rent", label: "Kira" },
     { value: "bill", label: "Fatura" },
     { value: "subscription", label: "Abonelik" },
+    { value: "grocery", label: "Market" },
+    { value: "education", label: "Eğitim" },
+    { value: "transport", label: "Ulaşım" },
+    { value: "health", label: "Sağlık" },
     { value: "other", label: "Diğer" },
   ],
 };
@@ -43,31 +49,30 @@ const todayStr = () => {
 
 export default function AddCashflow() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { householdId } = useSession();
   const fxRates = useFxRates();
   const params = useLocalSearchParams<{ direction?: string }>();
-  const [direction, setDirection] = useState<CashFlowDirection>(
-    params.direction === "expense" ? "expense" : "income"
-  );
+  // Yön butondan gelir; ekranda Tür seçici YOK. Yoksa income varsay.
+  const direction: CashFlowDirection = params.direction === "expense" ? "expense" : "income";
+
   const [recurrence, setRecurrence] = useState<"monthly" | "one_time">("monthly");
-  const [category, setCategory] = useState("salary");
+  const [category, setCategory] = useState(CATEGORIES[direction][0].value);
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [occurredOn, setOccurredOn] = useState(todayStr());
   const [saving, setSaving] = useState(false);
 
-  const switchDirection = (d: CashFlowDirection) => {
-    setDirection(d);
-    setCategory(CATEGORIES[d][0].value);
-  };
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: direction === "income" ? "Gelir ekle" : "Gider ekle" });
+  }, [navigation, direction]);
 
   const preview = useMemo(() => {
     if (currency === "TRY") return null;
     const amt = parseTRYInput(amount);
     if (!amt) return null;
-    const v = toTRY(amt, currency, fxRates);
-    return { value: v, rateDate: fxRates[currency]?.rate_date };
+    return { value: toTRY(amt, currency, fxRates), rateDate: fxRates[currency]?.rate_date };
   }, [amount, currency, fxRates]);
 
   const save = async () => {
@@ -98,21 +103,9 @@ export default function AddCashflow() {
   return (
     <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
       <Card>
+        {/* Sıklık — tek üst kontrol (Tür yön butonundan belli) */}
+        <Text style={styles.label}>Sıklık</Text>
         <View style={styles.segment}>
-          {(["income", "expense"] as const).map((d) => (
-            <Pressable
-              key={d}
-              onPress={() => switchDirection(d)}
-              style={[styles.seg, direction === d && styles.segActive]}
-            >
-              <Text style={[styles.segText, direction === d && { color: colors.ink }]}>
-                {d === "income" ? "Gelir" : "Düzenli gider"}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={[styles.segment, { marginTop: -spacing(0.5) }]}>
           {(["monthly", "one_time"] as const).map((r) => (
             <Pressable
               key={r}
@@ -120,19 +113,13 @@ export default function AddCashflow() {
               style={[styles.seg, recurrence === r && styles.segActive]}
             >
               <Text style={[styles.segText, recurrence === r && { color: colors.ink }]}>
-                {r === "monthly" ? "Aylık" : "Tek seferlik"}
+                {r === "monthly" ? "Her ay" : "Tek seferlik"}
               </Text>
             </Pressable>
           ))}
         </View>
 
-        <Select
-          label="Kategori"
-          value={category}
-          options={CATEGORIES[direction]}
-          onChange={setCategory}
-        />
-        <Field label="Açıklama (opsiyonel)" value={label} onChangeText={setLabel} placeholder="örn. Ana maaş" />
+        <Select label="Kategori" value={category} options={CATEGORIES[direction]} onChange={setCategory} />
         <Field
           label={recurrence === "monthly" ? "Aylık tutar" : "Tutar"}
           value={amount}
@@ -145,12 +132,13 @@ export default function AddCashflow() {
         )}
         <Select label="Para birimi" value={currency} options={currencyOptions} onChange={setCurrency} />
         {currency !== "TRY" && (
-          <Text style={{ color: colors.muted, fontSize: 13, marginTop: -spacing(0.5), marginBottom: spacing(1) }}>
+          <Text style={styles.fxNote}>
             {preview?.value != null
               ? `≈ ${formatTRY(preview.value)} · TCMB ${preview.rateDate ?? ""} alış kuru`
               : "Kur henüz çekilmedi"}
           </Text>
         )}
+        <Field label="Açıklama (opsiyonel)" value={label} onChangeText={setLabel} placeholder="örn. Ana maaş" />
       </Card>
       <Button title="Kaydet" onPress={save} loading={saving} />
     </ScrollView>
@@ -158,6 +146,8 @@ export default function AddCashflow() {
 }
 
 const styles = {
+  label: { fontWeight: "600" as const, marginBottom: 6, color: colors.ink },
+  fxNote: { color: colors.muted, fontSize: 13, marginTop: -spacing(0.5), marginBottom: spacing(1) },
   segment: { flexDirection: "row" as const, gap: 6, marginBottom: spacing(1.5) },
   seg: {
     flex: 1,

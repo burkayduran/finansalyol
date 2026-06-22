@@ -7,7 +7,12 @@ import { mandatoryMinimum } from "@/core/minimum";
 import { daysUntilDue } from "@/core/dates";
 import { outstandingBalance } from "@/core/installment";
 import { assetValueTRY, assetPnlTRY } from "@/core/assets";
-import { projectCashflow, type CashflowDebt, type CashflowEntry } from "@/core/cashflow";
+import {
+  projectCashflow,
+  type CashflowDebt,
+  type CashflowEntry,
+  type MonthlyFlow,
+} from "@/core/cashflow";
 
 const DAY_MS = 86400000;
 
@@ -66,6 +71,11 @@ export interface AssetView {
   pnlTRY: number | null;
 }
 
+export interface KindTotal {
+  kind: string;
+  value: number;
+}
+
 export interface HouseholdData {
   loading: boolean;
   debts: Debt[];
@@ -79,6 +89,10 @@ export interface HouseholdData {
   /** Bu ayın gelir − (düzenli gider + borç yükümlülüğü) neti. */
   monthlyNet: number;
   assetViews: AssetView[];
+  /** Varlık dağılımı: asset.kind'a göre TRY toplam (donut için). */
+  assetByKind: KindTotal[];
+  /** 12 aylık gelir-gider projeksiyonu (grafikler için). */
+  projection: MonthlyFlow[];
   upcoming: UpcomingPayment[];
   byPerson: PersonBreakdown[];
   /** 1 birim para birimi kaç TRY (TCMB alış). TRY → 1. */
@@ -171,7 +185,17 @@ export function useHousehold(): HouseholdData {
       ? new Date(d.first_installment_date)
       : undefined,
   }));
-  const monthlyNet = projectCashflow(cashflowEntries, cashflowDebts, 1)[0]?.net ?? 0;
+  const projection = projectCashflow(cashflowEntries, cashflowDebts, 12);
+  const monthlyNet = projection[0]?.net ?? 0;
+
+  // Varlık dağılımı (kind bazlı TRY toplam).
+  const kindMap = new Map<string, number>();
+  for (const v of assetViews) {
+    kindMap.set(v.asset.kind, (kindMap.get(v.asset.kind) ?? 0) + v.valueTRY);
+  }
+  const assetByKind: KindTotal[] = [...kindMap.entries()]
+    .map(([kind, value]) => ({ kind, value }))
+    .filter((k) => k.value > 0);
 
   const upcoming: UpcomingPayment[] = debts
     .map((debt) => ({
@@ -212,6 +236,8 @@ export function useHousehold(): HouseholdData {
     net: totalAsset - totalDebt,
     monthlyNet,
     assetViews,
+    assetByKind,
+    projection,
     upcoming,
     byPerson,
     fxRateFor,

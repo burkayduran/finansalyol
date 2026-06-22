@@ -49,9 +49,10 @@ app/                         # expo-router ekranları (file-based routing)
 ├── _layout.tsx              # oturum + hane yönlendirme bekçisi
 ├── sign-in.tsx              # giriş / kayıt
 ├── onboarding.tsx           # hane kur / davetle katıl
-├── add-debt.tsx · add-asset.tsx
+├── add-debt.tsx · add-asset.tsx · add-cashflow.tsx
 ├── debt/[id].tsx            # borç detay + İçgörü sekmesi (asgari tuzağı)
-└── (tabs)/                  # Pano · Aile · Ayarlar
+├── projection.tsx           # taksitli borç 12 aylık plan
+└── (tabs)/                  # Pano (grafikler) · Gelir-gider · Ekle (hub) · Aile · Ayarlar
 src/
 ├── core/                    # saf hesap motoru:
 │                            #   rateConfig (TCMB tavan) · minimum (BDDK) · interest
@@ -61,7 +62,7 @@ src/
 ├── lib/                     # supabase client, db tipleri, push kaydı
 ├── hooks/useHousehold.ts    # pano verisi + türetilmiş değerler
 ├── providers/               # oturum + aktif hane bağlamı
-└── components/ · theme.ts
+└── components/ (ui.tsx · charts.tsx — react-native-svg) · theme.ts
 supabase/
 ├── schema.sql               # tablolar + RLS (kanonik)
 ├── migrations/              # 0002: taksitli KMH · 0003: varlık türleri+FX+gelir-gider · 0004: tek seferlik akış

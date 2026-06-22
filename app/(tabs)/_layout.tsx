@@ -24,6 +24,10 @@ export default function TabsLayout() {
         options={{ title: "Gelir-gider", tabBarIcon: icon("📊") }}
       />
       <Tabs.Screen
+        name="add"
+        options={{ title: "Ekle", tabBarIcon: icon("＋"), headerTitle: "Ekle" }}
+      />
+      <Tabs.Screen
         name="family"
         options={{ title: "Aile", tabBarIcon: icon("👪") }}
       />
