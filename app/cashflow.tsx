@@ -94,14 +94,14 @@ export default function Cashflow() {
         <Card>
           <Text style={styles.section}>Kalemler</Text>
           {data.cashFlows.map((c) => (
-            <View key={c.id} style={styles.row}>
+            <Pressable key={c.id} style={styles.row} onPress={() => router.push(`/add-cashflow?id=${c.id}`)}>
               <Text style={{ color: colors.ink }}>{c.label ?? c.category}</Text>
               <Text style={{ color: c.direction === "income" ? colors.asset : colors.debt, fontWeight: "700" }}>
                 {c.direction === "income" ? "+" : "−"}
                 {formatTRY(Number(c.amount))}
                 {c.currency !== "TRY" ? ` ${c.currency}` : ""}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </Card>
       )}

@@ -5,7 +5,8 @@ import { useHousehold } from "@/hooks/useHousehold";
 import { Card } from "@/components/ui";
 import { PaymentModal } from "@/components/PaymentModal";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
-import { Donut, Legend, BarsMonthly, type Slice } from "@/components/charts";
+import { Donut, Legend, type Slice } from "@/components/charts";
+import { CashflowChart, type CashflowMonth } from "@/components/CashflowChart";
 import { skipOccurrence } from "@/lib/occurrences";
 import { formatTRY } from "@/core/format";
 import { colors, spacing } from "@/theme";
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const data = useHousehold();
   const [refreshing, setRefreshing] = useState(false);
   const [donutView, setDonutView] = useState<"debt" | "asset">("debt");
+  const [selMonth, setSelMonth] = useState<string | undefined>(undefined);
   const [payTarget, setPayTarget] = useState<{ debt: Debt; occ: PaymentOccurrence } | null>(null);
 
   useFocusEffect(useCallback(() => { data.reload(); }, [data.reload]));
@@ -50,10 +52,14 @@ export default function Dashboard() {
   const assetSlices: Slice[] = data.assetByKind.map((k, i) => ({
     label: KIND_LABELS[k.kind] ?? k.kind, value: k.value, color: SLICE_COLORS[i % SLICE_COLORS.length],
   }));
-  const months = data.projection.slice(0, 6).map((m) => ({
-    label: TR_MONTHS[m.month.getMonth()], income: m.income, outflow: m.expense + m.debtDue,
+  const cashflowMonths: CashflowMonth[] = data.projection.slice(0, 6).map((m) => ({
+    monthKey: m.month.toISOString(),
+    label: TR_MONTHS[m.month.getMonth()],
+    income: m.income,
+    outflow: m.expense + m.debtDue,
+    net: m.income - m.expense - m.debtDue,
   }));
-  const hasFlow = months.some((m) => m.income > 0 || m.outflow > 0);
+  const hasFlow = cashflowMonths.some((m) => m.income > 0 || m.outflow > 0);
 
   return (
     <ScrollView
@@ -83,18 +89,37 @@ export default function Dashboard() {
         )}
 
         <View style={{ height: 1, backgroundColor: colors.line, marginVertical: spacing(1.5) }} />
-        <Stat label="Toplam borç" value={formatTRY(data.totalDebt)} color={colors.debt} />
+        <Pressable onPress={() => router.push("/debts")}>
+          <Stat label="Toplam borç ›" value={formatTRY(data.totalDebt)} color={colors.debt} />
+        </Pressable>
         <Pressable onPress={() => router.push("/assets")}>
           <Stat label="Toplam varlık ›" value={formatTRY(data.totalAsset)} color={colors.asset} />
         </Pressable>
         <Stat label="Net durum" value={formatTRY(data.net)} color={data.net < 0 ? colors.danger : colors.asset} bold />
       </Card>
 
+      {data.debts.length === 0 && data.assets.length === 0 && (
+        <Card>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: colors.ink }}>Hadi başlayalım</Text>
+          <Text style={{ color: colors.inkSoft, marginVertical: spacing(1) }}>
+            İlk borç, varlık veya gelirini ekleyince özetin canlanır.
+          </Text>
+          <Pressable onPress={() => router.push("/add")} style={styles.cta}>
+            <Text style={{ color: colors.primaryInk, fontWeight: "700" }}>+ Ekle</Text>
+          </Pressable>
+        </Card>
+      )}
+
       {/* Yaklaşan ödemeler */}
       <Card>
         <Text style={styles.section}>Yaklaşan ödemeler</Text>
         {data.urgentOccurrences.length === 0 ? (
-          <Text style={styles.empty}>Bekleyen ödeme yok.</Text>
+          <View>
+            <Text style={styles.empty}>Henüz yaklaşan ödeme yok.</Text>
+            <Pressable onPress={() => router.push("/add-debt")}>
+              <Text style={{ color: colors.primary, fontWeight: "700" }}>Borç / ödeme ekle</Text>
+            </Pressable>
+          </View>
         ) : (
           <>
             {data.urgentOccurrences.slice(0, 3).map((o) => (
@@ -154,29 +179,34 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Analiz / grafikler — en altta */}
+      {/* Analizler — en altta, aksiyonları aşağı itmez */}
+      {(debtSlices.length > 0 || assetSlices.length > 0 || hasFlow) && (
+        <Text style={[styles.section, { marginTop: spacing(1) }]}>Analizler</Text>
+      )}
+
       {(debtSlices.length > 0 || assetSlices.length > 0) && (
         <Card>
+          <Text style={styles.cardTitle}>Borç-varlık dağılımı</Text>
           <View style={styles.toggle}>
             <Pressable onPress={() => setDonutView("debt")} style={[styles.seg, donutView === "debt" && styles.segActive]}>
-              <Text style={[styles.segText, donutView === "debt" && { color: colors.ink }]}>Borç dağılımı</Text>
+              <Text style={[styles.segText, donutView === "debt" && { color: colors.ink }]}>Borç</Text>
             </Pressable>
             <Pressable onPress={() => setDonutView("asset")} style={[styles.seg, donutView === "asset" && styles.segActive]}>
-              <Text style={[styles.segText, donutView === "asset" && { color: colors.ink }]}>Varlık dağılımı</Text>
+              <Text style={[styles.segText, donutView === "asset" && { color: colors.ink }]}>Varlık</Text>
             </Pressable>
           </View>
           {donutView === "debt" ? (
-            debtSlices.length > 0 ? <><Donut data={debtSlices} centerValue={data.totalDebt} centerLabel="toplam borç" /><Legend data={debtSlices} /></> : <Text style={styles.empty}>Borç yok.</Text>
+            debtSlices.length > 0 ? <><Donut data={debtSlices} size={150} centerValue={data.totalDebt} centerLabel="toplam borç" /><Legend data={debtSlices} /></> : <Text style={styles.empty}>Borç yok.</Text>
           ) : assetSlices.length > 0 ? (
-            <><Donut data={assetSlices} centerValue={data.totalAsset} centerLabel="toplam varlık" /><Legend data={assetSlices} /></>
+            <><Donut data={assetSlices} size={150} centerValue={data.totalAsset} centerLabel="toplam varlık" /><Legend data={assetSlices} /></>
           ) : <Text style={styles.empty}>Varlık yok.</Text>}
         </Card>
       )}
 
       {hasFlow && (
         <Card>
-          <Text style={styles.section}>Gelir-gider (6 ay)</Text>
-          <BarsMonthly months={months} />
+          <Text style={styles.cardTitle}>Nakit akışı · planlanan</Text>
+          <CashflowChart data={cashflowMonths} selectedMonthKey={selMonth} onSelectMonth={setSelMonth} />
           <Pressable onPress={() => router.push("/cashflow")}>
             <Text style={{ color: colors.primary, fontWeight: "700", textAlign: "center", marginTop: 8 }}>
               Detayı gör →
@@ -216,7 +246,9 @@ function Mini({ label, value, color }: { label: string; value: string; color: st
 
 const styles = {
   section: { fontSize: 16, fontWeight: "700" as const, color: colors.ink, marginBottom: spacing(1) },
+  cardTitle: { fontSize: 15, fontWeight: "700" as const, color: colors.ink, marginBottom: spacing(1) },
   empty: { color: colors.muted, paddingVertical: spacing(1) },
+  cta: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center" as const },
   progressTrack: { height: 8, borderRadius: 4, backgroundColor: colors.line, marginTop: spacing(0.75), overflow: "hidden" as const },
   progressFill: { height: 8, borderRadius: 4, backgroundColor: colors.primary },
   row: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, paddingVertical: spacing(0.75) },

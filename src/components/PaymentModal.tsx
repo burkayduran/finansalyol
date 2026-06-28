@@ -4,6 +4,7 @@ import { Alert, Modal, Pressable, Text, View } from "react-native";
 import { Button, Field } from "@/components/ui";
 import { parseTRYInput, formatTRY } from "@/core/format";
 import { recordPayment } from "@/lib/occurrences";
+import { track } from "@/lib/analytics";
 import { debtInstallment } from "@/core/paymentOccurrences";
 import type { Debt, PaymentOccurrence } from "@/lib/database.types";
 import { colors, spacing } from "@/theme";
@@ -59,11 +60,15 @@ export function PaymentModal({
         householdId, debt, occurrence: occurrence ?? null,
         amount: amt, paidAt: d.toISOString().slice(0, 10), note,
       });
+      track("payment_recorded", {
+        payment_type: amt >= fullAmount ? "full" : "partial",
+        occurrence_status_before: occurrence?.status,
+      });
       setAmount(""); setNote(""); setDateStr(todayStr());
       onSaved();
       onClose();
-    } catch (e: any) {
-      Alert.alert("Olmadı", e?.message ?? "Ödeme kaydedilemedi.");
+    } catch {
+      Alert.alert("Kaydedilemedi", "Ödeme kaydedilemedi. Lütfen tekrar dene.");
     } finally {
       setSaving(false);
     }

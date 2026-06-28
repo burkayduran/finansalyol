@@ -6,6 +6,7 @@ import { Card } from "@/components/ui";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { PaymentModal } from "@/components/PaymentModal";
 import { skipOccurrence } from "@/lib/occurrences";
+import { track } from "@/lib/analytics";
 import { formatTRY } from "@/core/format";
 import { colors, spacing } from "@/theme";
 import type { Debt, PaymentOccurrence, PaymentOccurrenceStatus } from "@/lib/database.types";
@@ -24,7 +25,7 @@ export default function Calendar() {
   const [filter, setFilter] = useState<"all" | "pending" | "paid" | "overdue">("all");
   const [openMonth, setOpenMonth] = useState<string | null>(null);
   const [payTarget, setPayTarget] = useState<{ debt: Debt; occ: PaymentOccurrence } | null>(null);
-  useFocusEffect(useCallback(() => { data.reload(); }, [data.reload]));
+  useFocusEffect(useCallback(() => { data.reload(); track("calendar_opened"); }, [data.reload]));
 
   const debtById = useMemo(() => {
     const m = new Map<string, Debt>();

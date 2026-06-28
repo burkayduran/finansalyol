@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider, useSession } from "@/providers/SessionProvider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { registerPushToken } from "@/lib/push";
 import { colors } from "@/theme";
 
@@ -52,8 +53,12 @@ function RootNavigator() {
       <Stack.Screen name="person/[id]" options={{ headerShown: true, title: "Kişi" }} />
       <Stack.Screen name="household" options={{ headerShown: true, title: "Ortak / Hane" }} />
       <Stack.Screen name="assets" options={{ headerShown: true, title: "Varlıklar" }} />
+      <Stack.Screen name="debts" options={{ headerShown: true, title: "Borçlar" }} />
+      <Stack.Screen name="legal/privacy" options={{ headerShown: true, title: "Gizlilik Politikası" }} />
+      <Stack.Screen name="legal/kvkk" options={{ headerShown: true, title: "KVKK Aydınlatma" }} />
+      <Stack.Screen name="legal/terms" options={{ headerShown: true, title: "Kullanım Şartları" }} />
       <Stack.Screen name="projection" options={{ headerShown: true, title: "Gelecek aylar" }} />
-      <Stack.Screen name="cashflow" options={{ headerShown: true, title: "Gelir-gider" }} />
+      <Stack.Screen name="cashflow" options={{ headerShown: true, title: "Nakit akışı" }} />
       <Stack.Screen name="family" options={{ headerShown: true, title: "Aile" }} />
     </Stack>
   );
@@ -62,10 +67,12 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <SessionProvider>
-        <StatusBar style="dark" />
-        <RootNavigator />
-      </SessionProvider>
+      <ErrorBoundary>
+        <SessionProvider>
+          <StatusBar style="dark" />
+          <RootNavigator />
+        </SessionProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }

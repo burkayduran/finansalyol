@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
+import { track } from "@/lib/analytics";
+import { BRAND } from "@/config/brand";
 import { Button, Field } from "@/components/ui";
 import { colors, spacing } from "@/theme";
 
@@ -24,6 +26,7 @@ export default function SignIn() {
           options: { data: { full_name: fullName } },
         });
         if (error) throw error;
+        track("account_created");
         Alert.alert("Hoş geldin", "Hesabın oluşturuldu, giriş yapılıyor.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -49,11 +52,9 @@ export default function SignIn() {
           justifyContent: "center",
         }}
       >
-        <Text style={{ fontSize: 28, fontWeight: "800", color: colors.ink }}>
-          Ailenizin parası, tek ekranda.
-        </Text>
+        <Text style={{ fontSize: 28, fontWeight: "800", color: colors.ink }}>{BRAND.appName}</Text>
         <Text style={{ fontSize: 16, color: colors.inkSoft, marginTop: spacing(1), marginBottom: spacing(3) }}>
-          Borçlar, ödemeler, birikimler — hep birlikte görün; biz de yaklaşınca hatırlatalım.
+          {BRAND.tagline}
         </Text>
 
         {mode === "sign_up" && (

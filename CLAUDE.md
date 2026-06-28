@@ -130,3 +130,21 @@ Yeni hesap kuralı eklerken önce `src/core/__tests__/engine.test.ts`. DB deği�
 - **Kişi arşivleme:** silme yerine `persons.is_archived` (finansal verisi olan kişi silinmez).
 - **Dil:** pazarlama metni ekranlara yazılmaz ("faiz tuzağı", "bilanço", "yargısız merdiven"
   vb. yok); sade ürün dili.
+
+## 11. Commercial-ready katman (MVP v1.3)
+
+- **Marka tek kaynak:** `src/config/brand.ts` (appName/tagline/supportEmail). Ekranlarda
+  hard-coded marka adı YOK.
+- **Analytics:** `src/lib/analytics.ts` `track()` — kritik aksiyonlarda çağrılır
+  (debt_added, payment_recorded, payment_reversed, onboarding_completed, …). Provider sonra bağlanır.
+- **Hata yakalama:** global `ErrorBoundary` (`app/_layout.tsx`). Mutation hataları kullanıcıya
+  sade Türkçe mesajla gösterilir; teknik metin gösterilmez.
+- **Sekme adları (commercial):** Özet · Aile · Ekle · Ödemeler · Hesabım (route adları aynı kalır).
+- **Borç detay ekranı** `/debts` (kişi/banka/tür kırılımı + filtre); Özet'te Toplam borç ve
+  Toplam varlık stat'ları tıklanır (`/debts`, `/assets`).
+- **Nakit akışı grafiği:** `src/components/CashflowChart.tsx` — aya dokun, ay detayını gör.
+- **Düzenle/sil/geri al:** borç/varlık/gelir-gider formları `?id` ile düzenleme + silme;
+  ödeme geri alma `reversePayment` (payments.is_reversed, occurrence + bakiye + kalan taksit geri).
+- **Güven:** Hesabım'da Profil/Bildirim/Aile/Veri-güvenlik/Yasal/Destek; legal ekranlar
+  (`app/legal/*`), veri dışa aktar (JSON), hesap silme talebi (`account_deletion_requests`).
+- **Onboarding:** hane → kişi chip'leri → bildirim; boş Özet yerine aksiyonlu empty state.

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
@@ -45,7 +45,7 @@ export default function Assets() {
                 : null;
             const priced = ["fund", "stock", "gold", "commodity", "crypto"].includes(a.kind);
             return (
-              <View key={a.id} style={styles.row}>
+              <Pressable key={a.id} style={styles.row} onPress={() => router.push(`/add-asset?id=${a.id}`)}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: colors.ink, fontWeight: "600" }}>{a.label}</Text>
                   <Text style={{ color: colors.muted, fontSize: 13 }}>
@@ -69,7 +69,7 @@ export default function Assets() {
                     </Text>
                   )}
                 </View>
-              </View>
+              </Pressable>
             );
           })}
         </Card>

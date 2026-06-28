@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -8,6 +8,7 @@ import { OwnerSelect, type OwnerValue } from "@/components/OwnerSelect";
 import { parseTRYInput, formatTRY } from "@/core/format";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@/core/currencies";
 import { toTRY } from "@/core/fx";
+import { track } from "@/lib/analytics";
 import { useFxRates } from "@/hooks/useFxRates";
 import { colors, spacing } from "@/theme";
 import type { CashFlowDirection } from "@/lib/database.types";
@@ -53,9 +54,10 @@ export default function AddCashflow() {
   const navigation = useNavigation();
   const { householdId } = useSession();
   const fxRates = useFxRates();
-  const params = useLocalSearchParams<{ direction?: string; person?: string }>();
+  const params = useLocalSearchParams<{ direction?: string; person?: string; id?: string }>();
+  const editId = params.id;
   // Yön butondan gelir; ekranda Tür seçici YOK. Yoksa income varsay.
-  const direction: CashFlowDirection = params.direction === "expense" ? "expense" : "income";
+  const [direction, setDirection] = useState<CashFlowDirection>(params.direction === "expense" ? "expense" : "income");
 
   const [owner, setOwner] = useState<OwnerValue>(
     params.person ? { ownerType: "person", personId: params.person } : { ownerType: "person", personId: null }
@@ -69,8 +71,34 @@ export default function AddCashflow() {
   const [saving, setSaving] = useState(false);
 
   useLayoutEffect(() => {
-    navigation.setOptions({ title: direction === "income" ? "Gelir ekle" : "Gider ekle" });
-  }, [navigation, direction]);
+    navigation.setOptions({
+      title: editId ? "Kaydı düzenle" : direction === "income" ? "Gelir ekle" : "Gider ekle",
+    });
+  }, [navigation, direction, editId]);
+
+  useEffect(() => {
+    if (!editId) return;
+    supabase.from("cash_flows").select("*").eq("id", editId).maybeSingle().then(({ data }) => {
+      if (!data) return;
+      setDirection(data.direction);
+      setOwner({ ownerType: data.owner_type, personId: data.person_id });
+      setRecurrence(data.recurrence);
+      setCategory(data.category);
+      setLabel(data.label ?? "");
+      setAmount(String(data.amount));
+      setCurrency(data.currency);
+      if (data.occurred_on) {
+        const d = new Date(data.occurred_on);
+        setOccurredOn(`${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`);
+      }
+    });
+  }, [editId]);
+
+  const removeItem = () =>
+    Alert.alert("Kaydı sil", "Bu gelir/gider kaydı silinsin mi?", [
+      { text: "Vazgeç", style: "cancel" },
+      { text: "Sil", style: "destructive", onPress: async () => { await supabase.from("cash_flows").delete().eq("id", editId!); router.back(); } },
+    ]);
 
   const preview = useMemo(() => {
     if (currency === "TRY") return null;
@@ -91,7 +119,7 @@ export default function AddCashflow() {
       occurred = d.toISOString().slice(0, 10);
     }
     setSaving(true);
-    const { error } = await supabase.from("cash_flows").insert({
+    const payload = {
       household_id: householdId!,
       owner_type: owner.ownerType,
       person_id: owner.ownerType === "person" ? owner.personId : null,
@@ -102,9 +130,13 @@ export default function AddCashflow() {
       currency,
       recurrence,
       occurred_on: occurred,
-    });
+    };
+    const { error } = editId
+      ? await supabase.from("cash_flows").update(payload).eq("id", editId)
+      : await supabase.from("cash_flows").insert(payload);
     setSaving(false);
-    if (error) return Alert.alert("Olmadı", error.message);
+    if (error) return Alert.alert("Kaydedilemedi", "Kayıt eklenemedi. Lütfen tekrar dene.");
+    if (!editId) track("cashflow_item_added", { direction, recurrence });
     router.back();
   };
 
@@ -150,6 +182,7 @@ export default function AddCashflow() {
         <Field label="Açıklama (opsiyonel)" value={label} onChangeText={setLabel} placeholder="örn. Ana maaş" />
       </Card>
       <Button title="Kaydet" onPress={save} loading={saving} />
+      {editId && <Button title="Kaydı sil" variant="link" onPress={removeItem} />}
     </ScrollView>
   );
 }

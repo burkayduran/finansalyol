@@ -49,10 +49,11 @@ app/                         # expo-router ekranları (file-based routing)
 ├── _layout.tsx              # oturum + hane yönlendirme bekçisi
 ├── sign-in.tsx              # giriş / kayıt
 ├── onboarding.tsx           # hane kur / davetle katıl
-├── add-debt · add-asset · add-cashflow · assets · cashflow · family · household
-├── debt/[id].tsx · person/[id].tsx · projection.tsx
-└── (tabs)/                  # Pano · Kişiler · Ekle (hub) · Takvim · Ayarlar
-                             #   (+ Ekle başlık aksiyonu da var; Varlıklar -> /assets rotası)
+├── add-debt · add-asset · add-cashflow (hepsi ?id ile düzenleme) · assets · debts
+├── cashflow · family · household · debt/[id] · person/[id] · projection
+├── legal/privacy · legal/kvkk · legal/terms
+└── (tabs)/                  # Özet · Aile · Ekle (hub) · Ödemeler · Hesabım
+                             #   (+ Ekle başlık aksiyonu; Borç/Varlık stat -> /debts, /assets)
 src/
 ├── core/                    # saf hesap motoru:
 │                            #   rateConfig (TCMB tavan) · minimum (BDDK) · interest

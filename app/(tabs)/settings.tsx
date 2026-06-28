@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, Share, Switch, Text, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, Share, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { registerPushToken } from "@/lib/push";
-import { Button, Card } from "@/components/ui";
+import { track } from "@/lib/analytics";
+import { BRAND } from "@/config/brand";
+import { Button, Card, Field } from "@/components/ui";
 import { colors, spacing } from "@/theme";
 import type { NotificationPrefs } from "@/lib/database.types";
 
@@ -25,26 +27,34 @@ export default function Settings() {
   const router = useRouter();
   const { session, householdId, signOut } = useSession();
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULTS);
-  const [pushStatus, setPushStatus] = useState<string>("bilinmiyor");
+  const [pushStatus, setPushStatus] = useState("bilinmiyor");
   const [counts, setCounts] = useState({ members: 0, persons: 0, invites: 0 });
+  const [profile, setProfile] = useState<{ full_name: string; email: string }>({ full_name: "", email: "" });
+  const [householdName, setHouseholdName] = useState("");
+  const [editing, setEditing] = useState<null | "profile" | "household">(null);
+  const [draftName, setDraftName] = useState("");
 
   useEffect(() => {
     const uid = session?.user.id;
     if (!uid) return;
     supabase.from("notification_prefs").select("*").eq("member_id", uid).maybeSingle()
       .then(({ data }) => setPrefs(data ?? { ...DEFAULTS, member_id: uid }));
-    Notifications.getPermissionsAsync().then((p) => setPushStatus(p.granted ? "açık" : p.status));
+    supabase.from("profiles").select("full_name, email").eq("id", uid).maybeSingle()
+      .then(({ data }) => setProfile({ full_name: data?.full_name ?? "", email: data?.email ?? session?.user.email ?? "" }));
+    Notifications.getPermissionsAsync().then((p) => setPushStatus(p.granted ? "İzin verildi" : p.status === "denied" ? "Kapalı" : "İzin bekliyor"));
   }, [session?.user.id]);
 
   useEffect(() => {
     if (!householdId) return;
     (async () => {
-      const [m, p, i] = await Promise.all([
+      const [m, p, i, h] = await Promise.all([
         supabase.from("household_members").select("id", { count: "exact", head: true }).eq("household_id", householdId),
         supabase.from("persons").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("is_archived", false),
         supabase.from("household_invites").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "pending"),
+        supabase.from("households").select("name").eq("id", householdId).maybeSingle(),
       ]);
       setCounts({ members: m.count ?? 0, persons: p.count ?? 0, invites: i.count ?? 0 });
+      setHouseholdName(h.data?.name ?? "");
     })();
   }, [householdId]);
 
@@ -53,22 +63,32 @@ export default function Settings() {
     const next = { ...prefs, ...patch, member_id: uid };
     setPrefs(next);
     await supabase.from("notification_prefs").upsert(next, { onConflict: "member_id" });
+    if (patch.push_enabled || patch.email_enabled) track("notification_enabled", { push_enabled: next.push_enabled, email_enabled: next.email_enabled });
+  };
+
+  const saveEdit = async () => {
+    if (editing === "profile") {
+      await supabase.from("profiles").update({ full_name: draftName.trim() }).eq("id", session!.user.id);
+      setProfile((p) => ({ ...p, full_name: draftName.trim() }));
+    } else if (editing === "household" && householdId) {
+      await supabase.from("households").update({ name: draftName.trim() }).eq("id", householdId);
+      setHouseholdName(draftName.trim());
+    }
+    setEditing(null);
   };
 
   const sendTest = async () => {
-    const granted = await registerPushToken(session!.user.id);
+    await registerPushToken(session!.user.id);
     const perm = await Notifications.getPermissionsAsync();
-    setPushStatus(perm.granted ? "açık" : perm.status);
+    setPushStatus(perm.granted ? "İzin verildi" : "Kapalı");
     if (!perm.granted) return Alert.alert("İzin yok", "Bildirim izni kapalı görünüyor.");
-    await Notifications.scheduleNotificationAsync({
-      content: { title: "Test bildirimi", body: "Bildirimler çalışıyor." },
-      trigger: null,
-    });
-    Alert.alert("Gönderildi", granted ? "Test bildirimi gönderildi." : "Test bildirimi gönderildi (cihaz token'ı yok).");
+    await Notifications.scheduleNotificationAsync({ content: { title: "Test bildirimi", body: "Bildirimler çalışıyor." }, trigger: null });
+    Alert.alert("Gönderildi", "Test bildirimi gönderildi.");
   };
 
   const exportData = async () => {
     if (!householdId) return;
+    track("export_data_clicked");
     const [d, a, c, pay, per] = await Promise.all([
       supabase.from("debts").select("*").eq("household_id", householdId),
       supabase.from("assets").select("*").eq("household_id", householdId),
@@ -76,20 +96,55 @@ export default function Settings() {
       supabase.from("payments").select("*").eq("household_id", householdId),
       supabase.from("persons").select("*").eq("household_id", householdId),
     ]);
-    const payload = { exported_at: new Date().toISOString(), debts: d.data, assets: a.data, cash_flows: c.data, payments: pay.data, persons: per.data };
+    const payload = { app: BRAND.appName, exported_at: new Date().toISOString(), debts: d.data, assets: a.data, cash_flows: c.data, payments: pay.data, persons: per.data };
     await Share.share({ message: JSON.stringify(payload, null, 2) });
   };
 
-  const deleteAccount = () =>
-    Alert.alert("Hesabı sil", "Bu işlem geri alınamaz. Devam etmek için destek ekibiyle iletişime geçilir; şimdilik oturumunuz kapatılacak.", [
+  const requestDeletion = () =>
+    Alert.alert("Hesabımı sil", "Bu işlem geri alınamaz. Talebiniz alınır ve hesabınız silinmek üzere işaretlenir. Devam edilsin mi?", [
       { text: "Vazgeç", style: "cancel" },
-      { text: "Çıkış yap", style: "destructive", onPress: () => signOut() },
+      {
+        text: "Talep oluştur",
+        style: "destructive",
+        onPress: async () => {
+          const { error } = await supabase.from("account_deletion_requests").insert({ user_id: session!.user.id, household_id: householdId });
+          if (error) return Alert.alert("Olmadı", "Talep oluşturulamadı. Lütfen tekrar dene.");
+          track("delete_request_created");
+          Alert.alert("Talebiniz alındı", "Hesap silme talebiniz kaydedildi. İşlem tamamlanınca bilgilendirileceksiniz.");
+        },
+      },
     ]);
 
   const version = Constants.expoConfig?.version ?? "1.0.0";
 
   return (
     <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
+      <Card>
+        <Text style={styles.h}>Profil</Text>
+        {editing === "profile" ? (
+          <>
+            <Field label="Ad Soyad" value={draftName} onChangeText={setDraftName} />
+            <Button title="Kaydet" onPress={saveEdit} />
+          </>
+        ) : (
+          <>
+            <Line label="Ad Soyad" value={profile.full_name || "—"} />
+            <Line label="E-posta" value={profile.email} />
+            <Line label="Hane adı" value={householdName || "—"} />
+            <View style={{ flexDirection: "row", gap: 16, marginTop: spacing(0.5) }}>
+              <Pressable onPress={() => { setEditing("profile"); setDraftName(profile.full_name); }}><Text style={styles.action}>Profili düzenle</Text></Pressable>
+              <Pressable onPress={() => { setEditing("household"); setDraftName(householdName); }}><Text style={styles.action}>Hane adını düzenle</Text></Pressable>
+            </View>
+          </>
+        )}
+        {editing === "household" && (
+          <>
+            <Field label="Hane adı" value={draftName} onChangeText={setDraftName} />
+            <Button title="Kaydet" onPress={saveEdit} />
+          </>
+        )}
+      </Card>
+
       <Card>
         <Text style={styles.h}>Bildirimler</Text>
         <Row label="Push bildirimi" value={prefs.push_enabled} onChange={(v) => update({ push_enabled: v })} />
@@ -101,12 +156,9 @@ export default function Settings() {
         <Row label="1 gün önce" value={prefs.remind_1d} onChange={(v) => update({ remind_1d: v })} />
         <Row label="Son gün" value={prefs.remind_due_day} onChange={(v) => update({ remind_due_day: v })} />
         <Row label="Gecikirse ertesi gün" value={prefs.remind_overdue} onChange={(v) => update({ remind_overdue: v })} />
-        <View style={styles.line}><Text style={{ color: colors.inkSoft }}>Bildirim durumu</Text><Text style={{ color: colors.ink, fontWeight: "600" }}>Push izni: {pushStatus}</Text></View>
+        <Line label="Push izin durumu" value={pushStatus} />
         <Button title="Test bildirimi gönder" variant="ghost" onPress={sendTest} />
-      </Card>
-
-      <Card>
-        <Text style={styles.h}>Bildirim kapsamı</Text>
+        <Text style={styles.sub}>Bildirim kapsamı</Text>
         {SCOPES.map((s) => (
           <Pressable key={s.value} style={styles.line} onPress={() => update({ scope: s.value })}>
             <Text style={{ color: colors.ink }}>{s.label}</Text>
@@ -117,33 +169,39 @@ export default function Settings() {
 
       <Card>
         <Text style={styles.h}>Aile ve paylaşım</Text>
-        <View style={styles.line}><Text style={{ color: colors.inkSoft }}>Hane üyeleri</Text><Text style={{ color: colors.ink, fontWeight: "600" }}>{counts.members} kullanıcı</Text></View>
-        <View style={styles.line}><Text style={{ color: colors.inkSoft }}>Takip edilen kişiler</Text><Text style={{ color: colors.ink, fontWeight: "600" }}>{counts.persons} kişi</Text></View>
-        <View style={styles.line}><Text style={{ color: colors.inkSoft }}>Bekleyen davetler</Text><Text style={{ color: colors.ink, fontWeight: "600" }}>{counts.invites} davet</Text></View>
+        <Line label="Hane üyeleri" value={`${counts.members} kullanıcı`} />
+        <Line label="Takip edilen kişiler" value={`${counts.persons} kişi`} />
+        <Line label="Bekleyen davetler" value={`${counts.invites} davet`} />
         <Button title="Aileyi yönet / davet et" variant="ghost" onPress={() => router.push("/family")} />
       </Card>
 
       <Card>
         <Text style={styles.h}>Veri ve güvenlik</Text>
-        <Button title="Verileri dışa aktar" variant="ghost" onPress={exportData} />
-        <Button title="Gizlilik metni" variant="ghost" onPress={() => Alert.alert("Gizlilik", "Verileriniz yalnızca hanenizle paylaşılır ve hesabınıza bağlı olarak saklanır. Tam metin yakında uygulamaya eklenecek.")} />
-        <Button title="Hesabı sil" variant="link" onPress={deleteAccount} />
+        <Text style={{ color: colors.inkSoft, marginBottom: spacing(1) }}>
+          Tüm borç, varlık, ödeme ve aile kayıtlarını dosya olarak indir.
+        </Text>
+        <Button title="Verilerimi indir" variant="ghost" onPress={exportData} />
+        <Button title="Hesabımı sil" variant="link" onPress={requestDeletion} />
       </Card>
 
       <Card>
-        <Text style={styles.h}>Görünüm ve tercihler</Text>
-        <Text style={{ color: colors.muted }}>Para birimi, tema ve başlangıç ekranı yakında.</Text>
+        <Text style={styles.h}>Yasal metinler</Text>
+        <NavRow label="Gizlilik Politikası" onPress={() => router.push("/legal/privacy")} />
+        <NavRow label="KVKK Aydınlatma Metni" onPress={() => router.push("/legal/kvkk")} />
+        <NavRow label="Kullanım Şartları" onPress={() => router.push("/legal/terms")} />
       </Card>
 
       <Card>
         <Text style={styles.h}>Destek</Text>
-        <View style={styles.line}><Text style={{ color: colors.inkSoft }}>Uygulama sürümü</Text><Text style={{ color: colors.ink }}>{version}</Text></View>
-        <Button title="Geri bildirim gönder" variant="ghost" onPress={() => Share.share({ message: "Finansal Yol geri bildirim: " })} />
+        <NavRow label="Geri bildirim / hata bildir" onPress={() => Linking.openURL(`mailto:${BRAND.supportEmail}?subject=${encodeURIComponent(BRAND.appName + " geri bildirim")}`)} />
+        <Line label="Destek e-postası" value={BRAND.supportEmail} />
       </Card>
 
       <Card>
-        <Text style={styles.h}>Hesap</Text>
-        <Text style={{ color: colors.inkSoft }}>{session?.user.email}</Text>
+        <Text style={styles.h}>Uygulama bilgisi</Text>
+        <Line label="Uygulama" value={BRAND.appName} />
+        <Line label="Sürüm" value={version} />
+        <Line label="Hesap" value={session?.user.email ?? "—"} />
         <Button title="Çıkış yap" variant="link" onPress={signOut} />
       </Card>
     </ScrollView>
@@ -158,10 +216,27 @@ function Row({ label, value, onChange }: { label: string; value: boolean; onChan
     </View>
   );
 }
+function Line({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.line}>
+      <Text style={{ color: colors.inkSoft }}>{label}</Text>
+      <Text style={{ color: colors.ink, fontWeight: "600" }}>{value}</Text>
+    </View>
+  );
+}
+function NavRow({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable style={styles.line} onPress={onPress}>
+      <Text style={{ color: colors.ink }}>{label}</Text>
+      <Text style={{ color: colors.primary, fontWeight: "700" }}>›</Text>
+    </Pressable>
+  );
+}
 
 const styles = {
   h: { fontSize: 16, fontWeight: "700" as const, color: colors.ink, marginBottom: spacing(1) },
   sub: { fontSize: 13, fontWeight: "700" as const, color: colors.muted, marginTop: spacing(1) },
+  action: { color: colors.primary, fontWeight: "600" as const },
   line: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, paddingVertical: spacing(1) },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.line },
   radioOn: { borderColor: colors.primary, backgroundColor: colors.primary },

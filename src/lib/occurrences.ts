@@ -1,6 +1,6 @@
 // Payment occurrence istemci servisi: üretim (ensure), ödeme kaydetme, durum.
 import { supabase } from "./supabase";
-import type { Debt, PaymentOccurrence } from "./database.types";
+import type { Debt, Payment, PaymentOccurrence } from "./database.types";
 import {
   generateNextOccurrencesForDebt,
   recalculateOccurrenceStatus,
@@ -111,4 +111,48 @@ export async function recordPayment(input: RecordPaymentInput): Promise<void> {
 /** Occurrence'ı "ödeme gerekmiyor" olarak işaretle. */
 export async function skipOccurrence(id: string): Promise<void> {
   await supabase.from("payment_occurrences").update({ status: "skipped" }).eq("id", id);
+}
+
+function prevMonthISO(dateISO: string, n: number): string {
+  return addMonthsISO(dateISO, -n);
+}
+
+/**
+ * Ödemeyi geri al: payment'ı işaretle, occurrence ödenenini azalt + status tazele,
+ * borç bakiyesini ve (taksitli) kalan taksiti geri artır.
+ */
+export async function reversePayment(payment: Payment, debt: Debt): Promise<void> {
+  await supabase
+    .from("payments")
+    .update({ is_reversed: true, reversed_at: new Date().toISOString() })
+    .eq("id", payment.id);
+
+  const amount = Number(payment.amount);
+
+  if (payment.occurrence_id) {
+    const { data: occ } = await supabase
+      .from("payment_occurrences").select("*").eq("id", payment.occurrence_id).maybeSingle();
+    if (occ) {
+      const amount_paid = Math.max(0, Number(occ.amount_paid) - amount);
+      const status = occ.status === "skipped"
+        ? "skipped"
+        : recalculateOccurrenceStatus({ due_date: occ.due_date, amount_due: occ.amount_due, amount_paid });
+      await supabase.from("payment_occurrences").update({ amount_paid, status }).eq("id", occ.id);
+    }
+  }
+
+  const curBal = debtCurrentBalance(debt as DebtForOcc);
+  const patch: Record<string, unknown> = {
+    current_balance: curBal + amount, balance: curBal + amount, is_active: true,
+  };
+  if (debt.kind === "loan" || debt.kind === "installment_kmh") {
+    const inst = debtInstallment(debt as DebtForOcc);
+    if (inst > 0 && amount >= inst) {
+      const covered = installmentsCoveredByPayment(amount, inst);
+      const rem = (debt.remaining_installment_count ?? 0) + covered;
+      patch.remaining_installment_count = rem;
+      if (debt.next_due_date) patch.next_due_date = prevMonthISO(debt.next_due_date, covered);
+    }
+  }
+  await supabase.from("debts").update(patch as never).eq("id", debt.id);
 }

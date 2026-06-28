@@ -4,6 +4,7 @@ import { useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { Button, Card, Field } from "@/components/ui";
+import { track } from "@/lib/analytics";
 import { colors, spacing } from "@/theme";
 import type { Person } from "@/lib/database.types";
 
@@ -45,6 +46,7 @@ export default function Family() {
       .from("persons")
       .insert({ household_id: householdId!, display_name: newPerson.trim() });
     if (error) return Alert.alert("Olmadı", error.message);
+    track("person_added");
     setNewPerson("");
     load();
   };
@@ -78,6 +80,7 @@ export default function Family() {
       .select("code")
       .single();
     if (error) return Alert.alert("Olmadı", error.message);
+    track("invite_sent");
     setInviteEmail("");
     load();
     Share.share({

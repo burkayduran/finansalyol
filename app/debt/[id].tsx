@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { Button, Card, Field } from "@/components/ui";
 import { PaymentModal } from "@/components/PaymentModal";
+import { track } from "@/lib/analytics";
 import { formatTRY, formatPercent, parseTRYInput } from "@/core/format";
 import { daysUntilDue, formatShortDate, nextDueDate } from "@/core/dates";
 import { mandatoryMinimum } from "@/core/minimum";
@@ -33,6 +34,7 @@ export default function DebtDetail() {
   };
   useEffect(() => {
     load();
+    track("debt_detail_opened");
   }, [id]);
 
   if (!debt) {
@@ -153,6 +155,7 @@ export default function DebtDetail() {
         </>
       )}
 
+      <Button title="Borcu düzenle" variant="ghost" onPress={() => router.push(`/add-debt?id=${debt.id}`)} />
       <Button title="Borcu sil" variant="link" onPress={remove} />
 
       <PaymentModal

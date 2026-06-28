@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Link, useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { PaymentModal } from "@/components/PaymentModal";
+import { reversePayment } from "@/lib/occurrences";
+import { track } from "@/lib/analytics";
 import { formatTRY } from "@/core/format";
 import { colors, spacing } from "@/theme";
 import type { Debt, Payment, PaymentOccurrence } from "@/lib/database.types";
@@ -42,8 +44,30 @@ export default function PersonDetail() {
       .from("payments").select("*").in("debt_id", debtIds).order("paid_at", { ascending: false }).limit(20);
     setPayments(pays ?? []);
   }, [debts.map((d) => d.id).join(",")]);
-  useEffect(() => { loadPayments(); }, [loadPayments]);
+  useEffect(() => { loadPayments(); track("person_detail_opened"); }, [loadPayments]);
   useFocusEffect(useCallback(() => { data.reload(); }, [data.reload]));
+
+  const undo = (p: Payment) => {
+    const debt = data.debts.find((d) => d.id === p.debt_id);
+    if (!debt) return;
+    Alert.alert("Ödemeyi geri al", `${formatTRY(Number(p.amount))} ödeme geri alınsın mı?`, [
+      { text: "Vazgeç", style: "cancel" },
+      {
+        text: "Geri al",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await reversePayment(p, debt);
+            track("payment_reversed");
+            data.reload();
+            loadPayments();
+          } catch {
+            Alert.alert("Olmadı", "Ödeme geri alınamadı. Lütfen tekrar dene.");
+          }
+        },
+      },
+    ]);
+  };
 
   const debtById = useMemo(() => {
     const m = new Map<string, Debt>();
@@ -106,7 +130,14 @@ export default function PersonDetail() {
           {payments.map((p) => (
             <View key={p.id} style={styles.line}>
               <Text style={{ color: colors.muted, fontSize: 13 }}>{p.paid_at}</Text>
-              <Text style={{ color: colors.ink, fontWeight: "600" }}>{formatTRY(Number(p.amount))}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Text style={{ color: p.is_reversed ? colors.muted : colors.ink, fontWeight: "600", textDecorationLine: p.is_reversed ? "line-through" : "none" }}>
+                  {formatTRY(Number(p.amount))}
+                </Text>
+                {!p.is_reversed && (
+                  <Pressable onPress={() => undo(p)}><Text style={{ color: colors.primary, fontWeight: "600", fontSize: 13 }}>Geri al</Text></Pressable>
+                )}
+              </View>
             </View>
           ))}
         </Card>

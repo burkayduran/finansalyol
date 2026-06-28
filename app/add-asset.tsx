@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { Button, Card, Field, Select } from "@/components/ui";
@@ -10,6 +10,7 @@ import { formatShortDate } from "@/core/dates";
 import { depositYield } from "@/core/deposit";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@/core/currencies";
 import { toTRY } from "@/core/fx";
+import { track } from "@/lib/analytics";
 import { useFxRates } from "@/hooks/useFxRates";
 import { colors, spacing } from "@/theme";
 import type { AssetKind } from "@/lib/database.types";
@@ -28,8 +29,10 @@ const currencyOptions = CURRENCIES.map((c) => ({ value: c, label: c }));
 export default function AddAsset() {
   const router = useRouter();
   const { householdId } = useSession();
+  const navigation = useNavigation();
   const fxRates = useFxRates();
-  const params = useLocalSearchParams<{ person?: string }>();
+  const params = useLocalSearchParams<{ person?: string; id?: string }>();
+  const editId = params.id;
 
   const [owner, setOwner] = useState<OwnerValue>(
     params.person ? { ownerType: "person", personId: params.person } : { ownerType: "person", personId: null }
@@ -46,6 +49,35 @@ export default function AddAsset() {
   const [buyPrice, setBuyPrice] = useState("");
   const [lastPrice, setLastPrice] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useLayoutEffect(() => {
+    if (editId) navigation.setOptions({ title: "Varlığı düzenle" });
+  }, [navigation, editId]);
+
+  useEffect(() => {
+    if (!editId) return;
+    supabase.from("assets").select("*").eq("id", editId).maybeSingle().then(({ data }) => {
+      if (!data) return;
+      setOwner({ ownerType: data.owner_type, personId: data.person_id });
+      setLabel(data.label);
+      setKind(data.kind);
+      setCurrency(data.currency);
+      setBalance(data.balance != null ? String(data.balance) : "");
+      setAnnualRate(data.annual_rate != null ? String(data.annual_rate) : "");
+      setTermDays(data.term_days != null ? String(data.term_days) : "");
+      setStopaj(data.stopaj != null ? String(data.stopaj) : "");
+      setSymbol(data.symbol ?? "");
+      setQuantity(data.quantity != null ? String(data.quantity) : "");
+      setBuyPrice(data.buy_price != null ? String(data.buy_price) : "");
+      setLastPrice(data.last_price != null ? String(data.last_price) : "");
+    });
+  }, [editId]);
+
+  const removeItem = () =>
+    Alert.alert("Varlığı sil", "Bu varlık silinsin mi?", [
+      { text: "Vazgeç", style: "cancel" },
+      { text: "Sil", style: "destructive", onPress: async () => { await supabase.from("assets").delete().eq("id", editId!); router.back(); } },
+    ]);
 
   const isDeposit = kind === "deposit";
   const isPriced = kind === "fund" || kind === "stock" || kind === "gold";
@@ -88,7 +120,7 @@ export default function AddAsset() {
     }
 
     setSaving(true);
-    const { error } = await supabase.from("assets").insert({
+    const payload = {
       household_id: householdId!,
       owner_type: owner.ownerType,
       person_id: owner.ownerType === "person" ? owner.personId : null,
@@ -107,9 +139,13 @@ export default function AddAsset() {
       last_price: isPriced ? parseTRYInput(lastPrice) : null,
       last_price_at: isPriced && lastPrice ? new Date().toISOString() : null,
       price_source: isPriced && lastPrice ? "manual" : null,
-    } as never);
+    };
+    const { error } = editId
+      ? await supabase.from("assets").update(payload as never).eq("id", editId)
+      : await supabase.from("assets").insert(payload as never);
     setSaving(false);
-    if (error) return Alert.alert("Olmadı", error.message);
+    if (error) return Alert.alert("Kaydedilemedi", "Varlık kaydedilemedi. Lütfen tekrar dene.");
+    if (!editId) track("asset_added", { asset_kind: kind, owner_type: owner.ownerType });
     router.back();
   };
 
@@ -186,6 +222,7 @@ export default function AddAsset() {
         )}
       </Card>
       <Button title="Kaydet" onPress={save} loading={saving} />
+      {editId && <Button title="Varlığı sil" variant="link" onPress={removeItem} />}
     </ScrollView>
   );
 }

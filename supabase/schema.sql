@@ -196,10 +196,25 @@ create table if not exists public.payments (
   amount        numeric(14, 2) not null check (amount > 0),
   paid_at       date not null default current_date,
   note          text,
+  is_reversed   boolean not null default false,
+  reversed_at   timestamptz,
   created_by    uuid references public.profiles (id),
   created_at    timestamptz not null default now()
 );
 create index if not exists idx_payments_debt on public.payments (debt_id);
+
+-- account_deletion_requests — hesap silme talebi (gerçek deletion sonraki faz)
+create table if not exists public.account_deletion_requests (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references auth.users (id) on delete cascade,
+  household_id uuid references public.households (id) on delete set null,
+  status       text not null default 'pending' check (status in ('pending', 'done', 'cancelled')),
+  reason       text,
+  created_at   timestamptz not null default now()
+);
+alter table public.account_deletion_requests enable row level security;
+create policy "adr self" on public.account_deletion_requests for all
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------------
 -- push_tokens — Expo push token'ları (cihaz başına)

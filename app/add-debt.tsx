@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { BankSelect, Button, Card, Field, type BankValue } from "@/components/ui";
 import { OwnerSelect, type OwnerValue } from "@/components/OwnerSelect";
 import { parseTRYInput, formatTRY } from "@/core/format";
+import { track } from "@/lib/analytics";
 import { colors, spacing } from "@/theme";
 import type { DebtKind } from "@/lib/database.types";
 
@@ -27,8 +28,10 @@ function parseDate(s: string): Date | null {
 
 export default function AddDebt() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { householdId } = useSession();
-  const params = useLocalSearchParams<{ person?: string }>();
+  const params = useLocalSearchParams<{ person?: string; id?: string }>();
+  const editId = params.id;
 
   const [owner, setOwner] = useState<OwnerValue>(
     params.person ? { ownerType: "person", personId: params.person } : { ownerType: "person", personId: null }
@@ -50,6 +53,43 @@ export default function AddDebt() {
   const [saving, setSaving] = useState(false);
 
   const isInstallment = kind === "loan" || kind === "installment_kmh";
+
+  useLayoutEffect(() => {
+    if (editId) navigation.setOptions({ title: "Borcu düzenle" });
+  }, [navigation, editId]);
+
+  useEffect(() => {
+    if (!editId) return;
+    supabase.from("debts").select("*").eq("id", editId).maybeSingle().then(({ data: d }) => {
+      if (!d) return;
+      setOwner({ ownerType: d.owner_type, personId: d.person_id });
+      setKind(d.kind);
+      setBank({ code: d.bank_code ?? "", name: d.bank_name ?? d.bank ?? "" });
+      setLabel(d.label ?? "");
+      setNote(d.note ?? "");
+      setRate(d.user_monthly_rate != null ? String(d.user_monthly_rate) : "");
+      const bal = d.current_balance ?? d.balance;
+      setBalance(bal != null ? String(bal) : "");
+      setCardLimit(d.card_limit != null ? String(d.card_limit) : "");
+      setDueDay(d.due_day != null ? String(d.due_day) : "");
+      setStatementDay(d.statement_day != null ? String(d.statement_day) : "");
+      setUserMin(d.user_minimum_payment != null ? String(d.user_minimum_payment) : "");
+      setInstallment(d.monthly_installment != null ? String(d.monthly_installment) : d.installment != null ? String(d.installment) : "");
+      setRemaining(d.remaining_installment_count != null ? String(d.remaining_installment_count) : "");
+      setTotalCount(d.total_installment_count != null ? String(d.total_installment_count) : "");
+      const nd = d.next_due_date ?? d.first_installment_date;
+      if (nd) {
+        const x = new Date(nd);
+        setNextDue(`${String(x.getDate()).padStart(2, "0")}.${String(x.getMonth() + 1).padStart(2, "0")}.${x.getFullYear()}`);
+      }
+    });
+  }, [editId]);
+
+  const removeItem = () =>
+    Alert.alert("Borcu sil", "Bu borç ve ödemeleri silinsin mi?", [
+      { text: "Vazgeç", style: "cancel" },
+      { text: "Sil", style: "destructive", onPress: async () => { await supabase.from("debts").delete().eq("id", editId!); router.back(); } },
+    ]);
 
   const summary = useMemo(() => {
     if (!isInstallment) return null;
@@ -126,9 +166,12 @@ export default function AddDebt() {
     }
 
     setSaving(true);
-    const { error } = await supabase.from("debts").insert(base as never);
+    const { error } = editId
+      ? await supabase.from("debts").update(base as never).eq("id", editId)
+      : await supabase.from("debts").insert(base as never);
     setSaving(false);
-    if (error) return Alert.alert("Olmadı", error.message);
+    if (error) return Alert.alert("Kaydedilemedi", "Borç kaydedilemedi. Lütfen tekrar dene.");
+    if (!editId) track("debt_added", { debt_kind: kind, owner_type: owner.ownerType, has_bank_code: !!bank.code });
     router.back();
   };
 
@@ -191,6 +234,7 @@ export default function AddDebt() {
       </Card>
 
       <Button title="Kaydet" onPress={save} loading={saving} />
+      {editId && <Button title="Borcu sil" variant="link" onPress={removeItem} />}
     </ScrollView>
   );
 }

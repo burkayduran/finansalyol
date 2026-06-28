@@ -131,6 +131,15 @@ export type CashFlow = {
   created_at: string;
 }
 
+export type AccountDeletionRequest = {
+  id: string;
+  user_id: string;
+  household_id: string | null;
+  status: "pending" | "done" | "cancelled";
+  reason: string | null;
+  created_at: string;
+}
+
 export type FxRate = {
   currency: string;
   forex_buying: number | null;
@@ -151,6 +160,8 @@ export type Payment = {
   amount: number;
   paid_at: string;
   note: string | null;
+  is_reversed: boolean;
+  reversed_at: string | null;
   created_by: string | null;
   created_at: string;
 }
@@ -228,6 +239,7 @@ export interface Database {
       payment_occurrences: Row<PaymentOccurrence>;
       cash_flows: Row<CashFlow>;
       fx_rates: Row<FxRate>;
+      account_deletion_requests: Row<AccountDeletionRequest>;
       push_tokens: Row<{
         id: string;
         member_id: string;
