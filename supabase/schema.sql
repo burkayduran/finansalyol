@@ -108,6 +108,7 @@ create table if not exists public.persons (
   household_id      uuid not null references public.households (id) on delete cascade,
   display_name      text not null,
   linked_member_id  uuid references public.profiles (id) on delete set null,
+  is_archived       boolean not null default false,
   created_at        timestamptz not null default now()
 );
 create index if not exists idx_persons_household on public.persons (household_id);

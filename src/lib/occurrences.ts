@@ -8,16 +8,17 @@ import {
   debtInstallment,
   type DebtForOcc,
 } from "@/core/paymentOccurrences";
+import { installmentsCoveredByPayment } from "@/core/installment";
 
-const MONTHS_AHEAD = 6;
+const MONTHS_AHEAD = 12;
 
-function nextMonthISO(dateISO: string): string {
+function addMonthsISO(dateISO: string, n: number): string {
   const d = new Date(dateISO);
   const day = d.getDate();
-  const n = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-  const last = new Date(n.getFullYear(), n.getMonth() + 1, 0).getDate();
-  n.setDate(Math.min(day, last));
-  return n.toISOString().slice(0, 10);
+  const t = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  const last = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+  t.setDate(Math.min(day, last));
+  return t.toISOString().slice(0, 10);
 }
 
 /**
@@ -93,12 +94,16 @@ export async function recordPayment(input: RecordPaymentInput): Promise<void> {
 
   if (debt.kind === "loan" || debt.kind === "installment_kmh") {
     const inst = debtInstallment(debt as DebtForOcc);
+    // Çoklu taksit: ödenen tutar kaç tam taksit karşılıyor?
     if (inst > 0 && amount >= inst) {
-      const rem = Math.max(0, (debt.remaining_installment_count ?? debt.term_count ?? 0) - 1);
+      const paidInstallments = installmentsCoveredByPayment(amount, inst);
+      const prevRem = debt.remaining_installment_count ?? debt.term_count ?? 0;
+      const rem = Math.max(0, prevRem - paidInstallments);
       patch.remaining_installment_count = rem;
-      if (debt.next_due_date) patch.next_due_date = nextMonthISO(debt.next_due_date);
+      if (debt.next_due_date) patch.next_due_date = addMonthsISO(debt.next_due_date, paidInstallments);
       if (rem === 0) patch.is_active = false;
     }
+    // amount < taksit ise yalnız bakiye düşer (occurrence partial olur, yukarıda işlenir).
   }
   await supabase.from("debts").update(patch as never).eq("id", debt.id);
 }

@@ -1,5 +1,5 @@
 // "Kime ait?" seçici — kişiler + Ortak/Hane. owner_type + person_id üretir.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
@@ -20,6 +20,7 @@ export function OwnerSelect({
 }) {
   const { householdId } = useSession();
   const [persons, setPersons] = useState<Person[]>([]);
+  const autoSet = useRef(false);
 
   useEffect(() => {
     if (!householdId) return;
@@ -27,8 +28,23 @@ export function OwnerSelect({
       .from("persons")
       .select("*")
       .eq("household_id", householdId)
+      .eq("is_archived", false)
       .then(({ data }) => setPersons(data ?? []));
   }, [householdId]);
+
+  // Akıllı varsayılan: seçim yoksa "Ben" varsa onu, yoksa tek kişiyi otomatik seç.
+  useEffect(() => {
+    if (autoSet.current) return;
+    if (persons.length === 0) return;
+    if (value.ownerType === "person" && value.personId == null) {
+      const me = persons.find((p) => p.display_name.trim().toLocaleLowerCase("tr") === "ben");
+      const pick = me ?? (persons.length === 1 ? persons[0] : null);
+      if (pick) {
+        autoSet.current = true;
+        onChange({ ownerType: "person", personId: pick.id });
+      }
+    }
+  }, [persons, value, onChange]);
 
   const isActive = (p: Person) => value.ownerType === "person" && value.personId === p.id;
 

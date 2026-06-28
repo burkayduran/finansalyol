@@ -74,6 +74,10 @@ export interface HouseholdData {
   monthlyNet: number;
   /** Bu ay ödenecek toplam (occurrence kalanları). */
   thisMonthDue: number;
+  thisMonthTotal: number;
+  thisMonthPaid: number;
+  thisMonthOpenCount: number;
+  thisWeekCount: number;
   /** En acil açık ödemeler (tarih sırası). */
   urgentOccurrences: PaymentOccurrence[];
   /** Gelecek 3 ay ödeme toplamları. */
@@ -114,7 +118,7 @@ export function useHousehold(): HouseholdData {
     }
     const [a, p, c, fx, occ] = await Promise.all([
       supabase.from("assets").select("*").eq("household_id", householdId),
-      supabase.from("persons").select("*").eq("household_id", householdId),
+      supabase.from("persons").select("*").eq("household_id", householdId).eq("is_archived", false),
       supabase.from("cash_flows").select("*").eq("household_id", householdId).eq("active", true),
       supabase.from("fx_rates").select("*"),
       supabase.from("payment_occurrences").select("*").eq("household_id", householdId).order("due_date"),
@@ -180,8 +184,28 @@ export function useHousehold(): HouseholdData {
   };
 
   const openOcc = occurrences.filter(isOpen);
+  const monthOcc = occurrences.filter(inThisMonth).filter((o) => o.status !== "skipped");
+  const thisMonthTotal = monthOcc.reduce((s, o) => s + Number(o.amount_due), 0);
+  const thisMonthPaid = monthOcc.reduce((s, o) => s + Number(o.amount_paid), 0);
   const thisMonthDue = openOcc.filter(inThisMonth).reduce((s, o) => s + remainingDue(o), 0);
-  const urgentOccurrences = [...openOcc].sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 3);
+  const thisMonthOpenCount = openOcc.filter(inThisMonth).length;
+  const weekEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+  const thisWeekCount = openOcc.filter((o) => {
+    const d = new Date(o.due_date);
+    return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) && d <= weekEnd;
+  }).length;
+
+  // Sıralama: gecikenler > bugün > en yakın due > kısmi > diğer bekleyenler.
+  const rank = (o: PaymentOccurrence): number => {
+    const days = Math.round((new Date(o.due_date).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000);
+    if (o.status === "overdue" || days < 0) return 0;
+    if (days === 0) return 1;
+    if (o.status === "partial") return 3;
+    return 2;
+  };
+  const urgentOccurrences = [...openOcc]
+    .sort((a, b) => rank(a) - rank(b) || a.due_date.localeCompare(b.due_date))
+    .slice(0, 5);
 
   const next3Months: MonthDue[] = [0, 1, 2].map((k) => {
     const m = new Date(now.getFullYear(), now.getMonth() + k, 1);
@@ -214,7 +238,8 @@ export function useHousehold(): HouseholdData {
   return {
     loading, debts, assets, persons, cashFlows, occurrences, fxRates,
     totalDebt, totalAsset, net: totalAsset - totalDebt, monthlyNet,
-    thisMonthDue, urgentOccurrences, next3Months, personCards,
+    thisMonthDue, thisMonthTotal, thisMonthPaid, thisMonthOpenCount, thisWeekCount,
+    urgentOccurrences, next3Months, personCards,
     assetViews, assetByKind, projection,
     fxRateFor, debtOutstanding: toDebtOutstanding, reload,
   };

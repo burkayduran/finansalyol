@@ -12,7 +12,7 @@ import {
   type TextInputProps,
 } from "react-native";
 import { colors, radius, spacing } from "@/theme";
-import { BANKS, OTHER_BANK } from "@/core/banks";
+import { BANKS, OTHER_BANK, OTHER_BANK_CODE, type Bank } from "@/core/banks";
 
 export function Card({ children, style }: { children: ReactNode; style?: object }) {
   return <View style={[styles.card, style]}>{children}</View>;
@@ -134,28 +134,29 @@ export function Select({
 }
 
 /**
- * Banka seçici — modal liste + "Diğer (elle yaz)" serbest metin.
- * value gerçek banka adını tutar; listede yoksa "Diğer" modu açılır.
+ * Banka seçici — modal liste + "Diğer (elle yaz)". {code, name} döndürür.
+ * "Diğer" -> code "other" + kullanıcı girişi name.
  */
+export interface BankValue { code: string; name: string }
 export function BankSelect({
   label,
   value,
   onChange,
 }: {
   label: string;
-  value: string;
-  onChange: (v: string) => void;
+  value: BankValue;
+  onChange: (v: BankValue) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [other, setOther] = useState(value !== "" && !BANKS.includes(value));
+  const [other, setOther] = useState(value.code === OTHER_BANK_CODE);
 
-  const pick = (bank: string) => {
-    if (bank === OTHER_BANK) {
+  const pick = (bank: Bank | "other") => {
+    if (bank === "other") {
       setOther(true);
-      onChange("");
+      onChange({ code: OTHER_BANK_CODE, name: "" });
     } else {
       setOther(false);
-      onChange(bank);
+      onChange({ code: bank.code, name: bank.name });
     }
     setOpen(false);
   };
@@ -164,8 +165,8 @@ export function BankSelect({
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <Pressable style={styles.input} onPress={() => setOpen(true)}>
-        <Text style={{ color: value || other ? colors.ink : colors.muted, fontSize: 16 }}>
-          {value || (other ? "Diğer — elle yaz" : "Banka seç…")}
+        <Text style={{ color: value.name || other ? colors.ink : colors.muted, fontSize: 16 }}>
+          {value.name || (other ? "Diğer — elle yaz" : "Banka seç…")}
         </Text>
       </Pressable>
 
@@ -174,8 +175,8 @@ export function BankSelect({
           placeholder="Banka adını yaz"
           placeholderTextColor={colors.muted}
           style={[styles.input, { marginTop: 8 }]}
-          value={value}
-          onChangeText={onChange}
+          value={value.name}
+          onChangeText={(t) => onChange({ code: OTHER_BANK_CODE, name: t })}
         />
       )}
 
@@ -184,15 +185,12 @@ export function BankSelect({
           <Pressable style={styles.modalSheet} onPress={() => {}}>
             <Text style={[styles.fieldLabel, { fontSize: 16, marginBottom: 8 }]}>Banka seç</Text>
             <FlatList
-              data={[...BANKS, OTHER_BANK]}
-              keyExtractor={(item) => item}
+              data={[...BANKS, "other" as const]}
+              keyExtractor={(item) => (item === "other" ? "other" : item.code)}
               renderItem={({ item }) => (
-                <Pressable
-                  style={styles.modalRow}
-                  onPress={() => pick(item)}
-                >
-                  <Text style={{ color: item === OTHER_BANK ? colors.primary : colors.ink, fontSize: 16 }}>
-                    {item}
+                <Pressable style={styles.modalRow} onPress={() => pick(item)}>
+                  <Text style={{ color: item === "other" ? colors.primary : colors.ink, fontSize: 16 }}>
+                    {item === "other" ? OTHER_BANK : item.name}
                   </Text>
                 </Pressable>
               )}

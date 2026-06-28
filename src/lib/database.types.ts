@@ -50,6 +50,7 @@ export type Person = {
   household_id: string;
   display_name: string;
   linked_member_id: string | null;
+  is_archived: boolean;
   created_at: string;
 }
 

@@ -24,29 +24,34 @@ export default function People() {
         </Card>
       )}
 
-      {data.personCards.map((c) => (
-        <Pressable
-          key={c.key}
-          onPress={() => !c.isHousehold && c.person && router.push(`/person/${c.person.id}`)}
-        >
-          <Card>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ fontSize: 17, fontWeight: "800", color: colors.ink }}>{c.name}</Text>
-              <Text style={{ color: colors.muted, fontSize: 12 }}>
-                {c.upcomingCount > 0 ? `${c.upcomingCount} yaklaşan` : "yaklaşan yok"}
+      {data.personCards.map((c) => {
+        const net = c.totalAsset - c.totalDebt;
+        return (
+          <Pressable
+            key={c.key}
+            onPress={() => router.push(c.isHousehold ? "/household" : `/person/${c.person!.id}`)}
+          >
+            <Card>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ fontSize: 17, fontWeight: "800", color: colors.ink }}>{c.name}</Text>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>
+                  {c.upcomingCount > 0 ? `${c.upcomingCount} yaklaşan` : "yaklaşan yok"}
+                </Text>
+              </View>
+              <Text style={{ color: colors.muted, fontSize: 12, marginTop: spacing(0.5) }}>Net durum</Text>
+              <Text style={{ color: net < 0 ? colors.danger : colors.asset, fontSize: 20, fontWeight: "800" }}>
+                {formatTRY(net)}
               </Text>
-            </View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: spacing(1) }}>
-              <Cell label="Borç" value={formatTRY(c.totalDebt)} color={colors.debt} />
-              <Cell label="Varlık" value={formatTRY(c.totalAsset)} color={colors.asset} />
-              <Cell label="Bu ay ödeme" value={formatTRY(c.thisMonthPayment)} color={colors.ink} />
-            </View>
-            {!c.isHousehold && (
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: spacing(1) }}>
+                <Cell label="Borç" value={formatTRY(c.totalDebt)} color={colors.debt} />
+                <Cell label="Varlık" value={formatTRY(c.totalAsset)} color={colors.asset} />
+                <Cell label="Bu ay ödeme" value={formatTRY(c.thisMonthPayment)} color={colors.ink} />
+              </View>
               <Text style={{ color: colors.primary, fontWeight: "700", marginTop: spacing(1) }}>Detay →</Text>
-            )}
-          </Card>
-        </Pressable>
-      ))}
+            </Card>
+          </Pressable>
+        );
+      })}
 
       <Button title="+ Kişi ekle" variant="ghost" onPress={() => router.push("/family")} />
     </ScrollView>

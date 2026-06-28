@@ -120,7 +120,13 @@ Yeni hesap kuralı eklerken önce `src/core/__tests__/engine.test.ts`. DB deği�
   term_count/first_installment_date) geriye uyum için durur.
 - **Hatırlatma:** cron artık `payment_occurrences` üzerinden; yalnız pending/partial ve
   7/3/1/son gün/gecikme penceresi + üye kapsamı (own/household/all). paid/skipped → bildirim yok.
-- **Navigasyon:** Pano (aksiyon) · Kişiler · Takvim · Varlıklar · Ayarlar + her sekmede "+ Ekle".
-  Pano grafik değil aksiyon odaklı: bu ay ödenecek, en acil 3 ödeme, net, kişi kartları,
-  gelecek 3 ay; grafikler en altta.
-- **Dil:** pazarlama metni ekranlara yazılmaz ("faiz tuzağından çık" vb. yok); sade ürün dili.
+- **Navigasyon (v1.2):** Pano · Kişiler · **Ekle (hub)** · Takvim · Ayarlar + sağ üst "+ Ekle".
+  Varlıklar bottom tab değil; `/assets` rotası (Pano "Toplam varlık", Ekle hub, kişi detay).
+  Pano aksiyon odaklı: bu ay ödenecek + ödeme progress'i (ödendi/kalan), en acil ödemeler
+  (Ödeme kaydet + "Bu ay atla"), kişi kartları (net durum), gelecek 3 ay; grafikler en altta.
+- **Çoklu taksit:** ödeme ≥ taksit ise `floor(amount/installment)` taksit düşer
+  (`installmentsCoveredByPayment`); next_due_date o kadar ay ilerler. Projection ufku 12 ay.
+- **BankSelect** `{code, name}` döndürür (Diğer → code "other"); debts.bank_code/bank_name.
+- **Kişi arşivleme:** silme yerine `persons.is_archived` (finansal verisi olan kişi silinmez).
+- **Dil:** pazarlama metni ekranlara yazılmaz ("faiz tuzağı", "bilanço", "yargısız merdiven"
+  vb. yok); sade ürün dili.

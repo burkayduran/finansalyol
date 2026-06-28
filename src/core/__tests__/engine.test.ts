@@ -6,7 +6,7 @@ import { minimumTrap, avoidedInterestFromExtra } from "../interest";
 import { daysUntilDue } from "../dates";
 import { depositYield } from "../deposit";
 import { projectMonths } from "../projection";
-import { installmentsPaid, outstandingInstallment, outstandingBalance } from "../installment";
+import { installmentsPaid, outstandingInstallment, outstandingBalance, installmentsCoveredByPayment } from "../installment";
 import { assetValueTRY, assetPnlTRY, assetNativeValue } from "../assets";
 import { projectCashflow } from "../cashflow";
 
@@ -164,6 +164,12 @@ describe("installment derivation (§1)", () => {
     const d = { installment: 5000, termCount: 10, firstInstallmentDate: new Date(2026, 0, 15) };
     // Mart 2026'da 3 taksit ödenmiş -> 7 kaldı -> 35.000
     expect(outstandingInstallment(d, new Date(2026, 2, 15))).toBe(35000);
+  });
+  it("multi-installment payment covers floor(amount/installment) taksit", () => {
+    expect(installmentsCoveredByPayment(8750, 8750)).toBe(1);
+    expect(installmentsCoveredByPayment(26250, 8750)).toBe(3); // 3 taksit birden
+    expect(installmentsCoveredByPayment(5000, 8750)).toBe(0); // taksitten az -> 0
+    expect(installmentsCoveredByPayment(1000, 0)).toBe(0);
   });
   it("outstandingBalance uses raw balance for card/kmh, derived for installment", () => {
     expect(outstandingBalance({ kind: "credit_card", balance: 71000 })).toBe(71000);

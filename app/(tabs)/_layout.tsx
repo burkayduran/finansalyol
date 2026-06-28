@@ -27,8 +27,8 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: "Pano", tabBarIcon: icon("🏠"), headerTitle: "Aile panosu" }} />
       <Tabs.Screen name="people" options={{ title: "Kişiler", tabBarIcon: icon("👪") }} />
+      <Tabs.Screen name="add" options={{ title: "Ekle", tabBarIcon: icon("＋"), headerTitle: "Ne eklemek istiyorsun?" }} />
       <Tabs.Screen name="calendar" options={{ title: "Takvim", tabBarIcon: icon("🗓️") }} />
-      <Tabs.Screen name="assets" options={{ title: "Varlıklar", tabBarIcon: icon("💰") }} />
       <Tabs.Screen name="settings" options={{ title: "Ayarlar", tabBarIcon: icon("⚙️") }} />
     </Tabs>
   );

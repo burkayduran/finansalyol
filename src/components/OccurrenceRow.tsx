@@ -27,10 +27,12 @@ export function OccurrenceRow({
   occ,
   personName,
   onPay,
+  onSkip,
 }: {
   occ: PaymentOccurrence;
   personName?: string;
   onPay?: () => void;
+  onSkip?: () => void;
 }) {
   const remaining = Math.max(0, Number(occ.amount_due) - Number(occ.amount_paid));
   const st = STATUS[occ.status];
@@ -52,7 +54,12 @@ export function OccurrenceRow({
         <Text style={{ color: colors.ink, fontWeight: "700" }}>{formatTRY(remaining > 0 ? remaining : Number(occ.amount_due))}</Text>
         {!done && onPay && (
           <Pressable onPress={onPay} style={styles.payBtn}>
-            <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 13 }}>Ödendi</Text>
+            <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 13 }}>Ödeme kaydet</Text>
+          </Pressable>
+        )}
+        {!done && onSkip && (
+          <Pressable onPress={onSkip} hitSlop={6}>
+            <Text style={{ color: colors.muted, fontSize: 12 }}>Bu ay atla</Text>
           </Pressable>
         )}
       </View>

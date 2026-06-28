@@ -48,9 +48,10 @@ function RootNavigator() {
       <Stack.Screen name="add-debt" options={{ presentation: "modal", headerShown: true, title: "Borç ekle" }} />
       <Stack.Screen name="add-asset" options={{ presentation: "modal", headerShown: true, title: "Varlık ekle" }} />
       <Stack.Screen name="add-cashflow" options={{ presentation: "modal", headerShown: true, title: "Gelir / Gider" }} />
-      <Stack.Screen name="add" options={{ presentation: "modal", headerShown: true, title: "Ekle" }} />
       <Stack.Screen name="debt/[id]" options={{ headerShown: true, title: "Borç" }} />
       <Stack.Screen name="person/[id]" options={{ headerShown: true, title: "Kişi" }} />
+      <Stack.Screen name="household" options={{ headerShown: true, title: "Ortak / Hane" }} />
+      <Stack.Screen name="assets" options={{ headerShown: true, title: "Varlıklar" }} />
       <Stack.Screen name="projection" options={{ headerShown: true, title: "Gelecek aylar" }} />
       <Stack.Screen name="cashflow" options={{ headerShown: true, title: "Gelir-gider" }} />
       <Stack.Screen name="family" options={{ headerShown: true, title: "Aile" }} />

@@ -26,6 +26,12 @@ export function outstandingInstallment(
   return Math.max(0, remaining) * d.installment;
 }
 
+/** Bir ödeme kaç tam taksit kapatır? (amount < taksit -> 0) */
+export function installmentsCoveredByPayment(amount: number, monthlyInstallment: number): number {
+  if (monthlyInstallment <= 0) return 0;
+  return Math.floor(amount / monthlyInstallment);
+}
+
 /** Kalan taksit sayısı (0..termCount). */
 export function installmentsRemaining(
   firstDate: Date,

@@ -3,16 +3,16 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
-import { BankSelect, Button, Card, Field } from "@/components/ui";
+import { BankSelect, Button, Card, Field, type BankValue } from "@/components/ui";
 import { OwnerSelect, type OwnerValue } from "@/components/OwnerSelect";
 import { parseTRYInput, formatTRY } from "@/core/format";
 import { colors, spacing } from "@/theme";
 import type { DebtKind } from "@/lib/database.types";
 
-type Segment = "credit_card" | "kmh" | "loan";
-const SEGMENTS: { key: Segment; label: string }[] = [
+const SEGMENTS: { key: DebtKind; label: string }[] = [
   { key: "credit_card", label: "Kredi kartı" },
   { key: "kmh", label: "KMH" },
+  { key: "installment_kmh", label: "Taksitli KMH" },
   { key: "loan", label: "Kredi" },
 ];
 const TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
@@ -33,9 +33,8 @@ export default function AddDebt() {
   const [owner, setOwner] = useState<OwnerValue>(
     params.person ? { ownerType: "person", personId: params.person } : { ownerType: "person", personId: null }
   );
-  const [segment, setSegment] = useState<Segment>("credit_card");
-  const [kmhMode, setKmhMode] = useState<"normal" | "installment">("normal");
-  const [bank, setBank] = useState("");
+  const [kind, setKind] = useState<DebtKind>("credit_card");
+  const [bank, setBank] = useState<BankValue>({ code: "", name: "" });
   const [label, setLabel] = useState("");
   const [balance, setBalance] = useState(""); // dönem borcu / kullanılan / güncel kalan
   const [cardLimit, setCardLimit] = useState("");
@@ -50,10 +49,6 @@ export default function AddDebt() {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const kind: DebtKind = useMemo(() => {
-    if (segment === "kmh") return kmhMode === "installment" ? "installment_kmh" : "kmh";
-    return segment;
-  }, [segment, kmhMode]);
   const isInstallment = kind === "loan" || kind === "installment_kmh";
 
   const summary = useMemo(() => {
@@ -71,15 +66,16 @@ export default function AddDebt() {
 
   const save = async () => {
     if (!ownerValid) return Alert.alert("Eksik", "Kime ait olduğunu seç.");
-    if (!bank.trim()) return Alert.alert("Eksik", "Banka seç.");
+    if (!bank.name.trim()) return Alert.alert("Eksik", "Banka seç.");
 
     const base: Record<string, unknown> = {
       household_id: householdId!,
       owner_type: owner.ownerType,
       person_id: owner.ownerType === "person" ? owner.personId : null,
       kind,
-      bank: bank.trim(),
-      bank_name: bank.trim(),
+      bank: bank.name.trim(),
+      bank_code: bank.code || null,
+      bank_name: bank.name.trim(),
       label: label.trim() || null,
       note: note.trim() || null,
       user_monthly_rate: parseTRYInput(rate),
@@ -144,23 +140,11 @@ export default function AddDebt() {
         <Text style={styles.label}>Borç türü</Text>
         <View style={styles.segment}>
           {SEGMENTS.map((s) => (
-            <Pressable key={s.key} onPress={() => setSegment(s.key)} style={[styles.seg, segment === s.key && styles.segActive]}>
-              <Text style={[styles.segText, segment === s.key && { color: colors.ink }]}>{s.label}</Text>
+            <Pressable key={s.key} onPress={() => setKind(s.key)} style={[styles.seg, kind === s.key && styles.segActive]}>
+              <Text style={[styles.segText, kind === s.key && { color: colors.ink }]}>{s.label}</Text>
             </Pressable>
           ))}
         </View>
-
-        {segment === "kmh" && (
-          <View style={[styles.segment, { marginTop: -spacing(0.5) }]}>
-            {(["normal", "installment"] as const).map((m) => (
-              <Pressable key={m} onPress={() => setKmhMode(m)} style={[styles.seg, kmhMode === m && styles.segActive]}>
-                <Text style={[styles.segText, kmhMode === m && { color: colors.ink }]}>
-                  {m === "normal" ? "Normal" : "Taksitli"}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
 
         <BankSelect label="Banka" value={bank} onChange={setBank} />
         <Field label="Etiket" value={label} onChangeText={setLabel} placeholder="örn. Market kartı" />

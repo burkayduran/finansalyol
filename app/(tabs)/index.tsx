@@ -6,8 +6,8 @@ import { Card } from "@/components/ui";
 import { PaymentModal } from "@/components/PaymentModal";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { Donut, Legend, BarsMonthly, type Slice } from "@/components/charts";
+import { skipOccurrence } from "@/lib/occurrences";
 import { formatTRY } from "@/core/format";
-import { daysUntilDue } from "@/core/dates";
 import { colors, spacing } from "@/theme";
 import type { Debt, PaymentOccurrence } from "@/lib/database.types";
 
@@ -55,8 +55,6 @@ export default function Dashboard() {
   }));
   const hasFlow = months.some((m) => m.income > 0 || m.outflow > 0);
 
-  const mostUrgent = data.urgentOccurrences[0];
-
   return (
     <ScrollView
       contentContainerStyle={{ padding: spacing(2) }}
@@ -66,37 +64,52 @@ export default function Dashboard() {
       <Card>
         <Text style={{ color: colors.inkSoft, fontSize: 14 }}>Bu ay ödenecek</Text>
         <Text style={{ color: colors.ink, fontSize: 36, fontWeight: "800", marginVertical: 2 }}>
-          {formatTRY(data.thisMonthDue)}
+          {formatTRY(data.thisMonthTotal > 0 ? data.thisMonthTotal : data.thisMonthDue)}
         </Text>
-        {mostUrgent && (
-          <Text style={{ color: colors.inkSoft, fontSize: 13, marginBottom: spacing(1) }}>
-            Yaklaşan: {mostUrgent.bank_name ?? mostUrgent.label ?? "Ödeme"} ·{" "}
-            {daysUntilDue(new Date(mostUrgent.due_date).getDate()) === 0
-              ? "bugün"
-              : `${Math.max(0, Math.round((new Date(mostUrgent.due_date).getTime() - Date.now()) / 86400000))} gün`}{" "}
-            · {formatTRY(Math.max(0, Number(mostUrgent.amount_due) - Number(mostUrgent.amount_paid)))}
-          </Text>
+        <Text style={{ color: colors.inkSoft, fontSize: 13 }}>
+          {data.thisMonthOpenCount} ödeme bekliyor · {data.thisWeekCount} ödeme bu hafta
+        </Text>
+
+        {data.thisMonthTotal > 0 && (
+          <>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: spacing(1) }}>
+              <Text style={{ color: colors.asset, fontSize: 13 }}>Ödendi: {formatTRY(data.thisMonthPaid)}</Text>
+              <Text style={{ color: colors.ink, fontSize: 13, fontWeight: "700" }}>Kalan: {formatTRY(data.thisMonthDue)}</Text>
+            </View>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${Math.min(100, Math.round((data.thisMonthPaid / data.thisMonthTotal) * 100))}%` }]} />
+            </View>
+          </>
         )}
-        <View style={{ height: 2, backgroundColor: colors.accent, width: 48, borderRadius: 2, marginVertical: spacing(1) }} />
+
+        <View style={{ height: 1, backgroundColor: colors.line, marginVertical: spacing(1.5) }} />
         <Stat label="Toplam borç" value={formatTRY(data.totalDebt)} color={colors.debt} />
-        <Stat label="Toplam varlık" value={formatTRY(data.totalAsset)} color={colors.asset} />
-        <Stat label="Net durum" value={formatTRY(data.net)} color={data.net < 0 ? colors.danger : colors.ink} bold />
+        <Pressable onPress={() => router.push("/assets")}>
+          <Stat label="Toplam varlık ›" value={formatTRY(data.totalAsset)} color={colors.asset} />
+        </Pressable>
+        <Stat label="Net durum" value={formatTRY(data.net)} color={data.net < 0 ? colors.danger : colors.asset} bold />
       </Card>
 
-      {/* Yaklaşan ödemeler (en acil 3) */}
+      {/* Yaklaşan ödemeler */}
       <Card>
         <Text style={styles.section}>Yaklaşan ödemeler</Text>
         {data.urgentOccurrences.length === 0 ? (
           <Text style={styles.empty}>Bekleyen ödeme yok.</Text>
         ) : (
-          data.urgentOccurrences.map((o) => (
-            <OccurrenceRow
-              key={o.id}
-              occ={o}
-              personName={o.owner_type === "household" ? "Ortak" : personName.get(o.person_id ?? "") ?? "—"}
-              onPay={() => openPay(o)}
-            />
-          ))
+          <>
+            {data.urgentOccurrences.slice(0, 3).map((o) => (
+              <OccurrenceRow
+                key={o.id}
+                occ={o}
+                personName={o.owner_type === "household" ? "Ortak" : personName.get(o.person_id ?? "") ?? "—"}
+                onPay={() => openPay(o)}
+                onSkip={() => skipOccurrence(o.id).then(() => data.reload())}
+              />
+            ))}
+            <Pressable onPress={() => router.push("/calendar")} style={{ paddingTop: spacing(1) }}>
+              <Text style={{ color: colors.primary, fontWeight: "700", textAlign: "center" }}>Tümünü gör</Text>
+            </Pressable>
+          </>
         )}
       </Card>
 
@@ -108,13 +121,13 @@ export default function Dashboard() {
             <Pressable
               key={c.key}
               style={styles.personCard}
-              onPress={() => !c.isHousehold && c.person && router.push(`/person/${c.person.id}`)}
+              onPress={() => router.push(c.isHousehold ? "/household" : `/person/${c.person!.id}`)}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Text style={{ fontWeight: "800", color: colors.ink, fontSize: 16 }}>{c.name}</Text>
-                {c.upcomingCount > 0 && (
-                  <Text style={{ color: colors.inkSoft, fontSize: 12 }}>{c.upcomingCount} yaklaşan ödeme</Text>
-                )}
+                <Text style={{ color: (c.totalAsset - c.totalDebt) < 0 ? colors.danger : colors.asset, fontWeight: "800" }}>
+                  {formatTRY(c.totalAsset - c.totalDebt)}
+                </Text>
               </View>
               <View style={{ flexDirection: "row", gap: spacing(2), marginTop: 4, flexWrap: "wrap" }}>
                 <Mini label="Borç" value={formatTRY(c.totalDebt)} color={colors.debt} />
@@ -204,6 +217,8 @@ function Mini({ label, value, color }: { label: string; value: string; color: st
 const styles = {
   section: { fontSize: 16, fontWeight: "700" as const, color: colors.ink, marginBottom: spacing(1) },
   empty: { color: colors.muted, paddingVertical: spacing(1) },
+  progressTrack: { height: 8, borderRadius: 4, backgroundColor: colors.line, marginTop: spacing(0.75), overflow: "hidden" as const },
+  progressFill: { height: 8, borderRadius: 4, backgroundColor: colors.primary },
   row: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, paddingVertical: spacing(0.75) },
   personCard: { paddingVertical: spacing(1), borderTopWidth: 1, borderTopColor: colors.line },
   toggle: { flexDirection: "row" as const, gap: 6, marginBottom: spacing(1.5) },

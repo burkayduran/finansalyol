@@ -40,7 +40,9 @@ export function Donut({
           {total > 0 &&
             data.map((d, i) => {
               const frac = Math.max(0, d.value) / total;
-              const dash = frac * C;
+              const seg = frac * C;
+              const gap = data.length > 1 ? Math.min(seg, C * 0.012) : 0; // segment arası boşluk
+              const dash = Math.max(0, seg - gap);
               const el = (
                 <Circle
                   key={i}
@@ -52,10 +54,10 @@ export function Donut({
                   fill="none"
                   strokeDasharray={`${dash} ${C - dash}`}
                   strokeDashoffset={-offset}
-                  strokeLinecap="butt"
+                  strokeLinecap="round"
                 />
               );
-              offset += dash;
+              offset += seg;
               return el;
             })}
         </G>
@@ -78,14 +80,19 @@ export function Donut({
   );
 }
 
-/** Donut/grafik altı renk açıklaması (legend). */
+/** Donut altı açıklama — renk · isim · tutar · yüzde. */
 export function Legend({ data }: { data: Slice[] }) {
+  const total = data.reduce((s, d) => s + Math.max(0, d.value), 0) || 1;
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center", marginTop: 8 }}>
+    <View style={{ gap: 6, marginTop: 10 }}>
       {data.map((d, i) => (
-        <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: d.color }} />
-          <Text style={{ color: colors.inkSoft, fontSize: 12 }}>{d.label}</Text>
+        <View key={i} style={{ flexDirection: "row", alignItems: "center" }}>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: d.color, marginRight: 8 }} />
+          <Text style={{ color: colors.ink, fontSize: 13, flex: 1 }}>{d.label}</Text>
+          <Text style={{ color: colors.inkSoft, fontSize: 13, marginRight: 8 }}>{formatTRY(d.value)}</Text>
+          <Text style={{ color: colors.muted, fontSize: 13, width: 42, textAlign: "right" }}>
+            %{Math.round((d.value / total) * 100)}
+          </Text>
         </View>
       ))}
     </View>
