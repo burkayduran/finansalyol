@@ -1,17 +1,35 @@
 // Supabase tablo tipleri (el yazımı; üretimde `supabase gen types` ile yenilenebilir).
 // schema.sql ile birebir tutulur.
 
-export type DebtKind = "credit_card" | "kmh" | "kmh_installment" | "loan";
+export type DebtKind = "credit_card" | "kmh" | "installment_kmh" | "loan";
 export type AssetKind =
   | "cash"
   | "deposit"
   | "fund"
   | "stock"
-  | "commodity"
-  | "crypto"
+  | "gold"
+  | "fx"
+  | "commodity" // geriye uyum
+  | "crypto" // geriye uyum (MVP'de geri planda)
   | "other";
 
 export type CashFlowDirection = "income" | "expense";
+
+export type OwnerType = "person" | "household";
+
+export type PaymentOccurrenceStatus =
+  | "pending"
+  | "partial"
+  | "paid"
+  | "overdue"
+  | "skipped";
+
+export type PaymentOccurrenceKind =
+  | "credit_card_minimum"
+  | "loan_installment"
+  | "installment_kmh"
+  | "kmh_manual"
+  | "custom";
 
 export type Profile = {
   id: string;
@@ -38,19 +56,35 @@ export type Person = {
 export type Debt = {
   id: string;
   household_id: string;
+  owner_type: OwnerType;
   person_id: string | null;
   kind: DebtKind;
-  bank: string;
+  bank: string; // geriye uyum
+  bank_code: string | null;
+  bank_name: string | null;
   label: string | null;
-  balance: number;
-  total_amount: number | null;
+  note: string | null;
+  // bakiye / tutar
+  balance: number; // geriye uyum
+  current_balance: number | null;
+  original_amount: number | null;
+  total_amount: number | null; // geriye uyum
   card_limit: number | null;
-  term_count: number | null;
-  first_installment_date: string | null;
-  installment: number | null;
+  statement_day: number | null;
+  // taksit programı
+  installment: number | null; // geriye uyum
+  monthly_installment: number | null;
+  term_count: number | null; // geriye uyum
+  total_installment_count: number | null;
+  remaining_installment_count: number | null;
+  first_installment_date: string | null; // geriye uyum
+  next_due_date: string | null;
   due_day: number;
   user_monthly_rate: number | null;
-  user_minimum: number | null;
+  user_minimum: number | null; // geriye uyum
+  user_minimum_payment: number | null;
+  reminder_enabled: boolean;
+  is_active: boolean;
   currency: string;
   created_at: string;
   updated_at: string;
@@ -59,6 +93,7 @@ export type Debt = {
 export type Asset = {
   id: string;
   household_id: string;
+  owner_type: OwnerType;
   person_id: string | null;
   label: string;
   kind: AssetKind;
@@ -82,6 +117,7 @@ export type Asset = {
 export type CashFlow = {
   id: string;
   household_id: string;
+  owner_type: OwnerType;
   person_id: string | null;
   direction: CashFlowDirection;
   category: string;
@@ -108,6 +144,9 @@ export type Payment = {
   id: string;
   household_id: string;
   debt_id: string;
+  occurrence_id: string | null;
+  owner_type: OwnerType;
+  person_id: string | null;
   amount: number;
   paid_at: string;
   note: string | null;
@@ -115,10 +154,36 @@ export type Payment = {
   created_at: string;
 }
 
+export type PaymentOccurrence = {
+  id: string;
+  household_id: string;
+  debt_id: string | null;
+  owner_type: OwnerType;
+  person_id: string | null;
+  due_date: string;
+  amount_due: number;
+  amount_paid: number;
+  status: PaymentOccurrenceStatus;
+  kind: PaymentOccurrenceKind;
+  installment_no: number | null;
+  total_installments: number | null;
+  bank_code: string | null;
+  bank_name: string | null;
+  label: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type NotificationPrefs = {
   member_id: string;
   push_enabled: boolean;
   email_enabled: boolean;
+  remind_7d: boolean;
+  remind_3d: boolean;
+  remind_1d: boolean;
+  remind_due_day: boolean;
+  remind_overdue: boolean;
+  scope: "own" | "household" | "all";
   days_before: number;
   weekly_digest: boolean;
   digest_weekday: number;
@@ -159,6 +224,7 @@ export interface Database {
       debts: Row<Debt>;
       assets: Row<Asset>;
       payments: Row<Payment>;
+      payment_occurrences: Row<PaymentOccurrence>;
       cash_flows: Row<CashFlow>;
       fx_rates: Row<FxRate>;
       push_tokens: Row<{

@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
-import { useSession } from "@/providers/SessionProvider";
 import { Button, Card, Field } from "@/components/ui";
+import { PaymentModal } from "@/components/PaymentModal";
 import { formatTRY, formatPercent, parseTRYInput } from "@/core/format";
 import { daysUntilDue, formatShortDate, nextDueDate } from "@/core/dates";
 import { mandatoryMinimum } from "@/core/minimum";
@@ -22,10 +22,9 @@ const TRAP_TEXT: Record<TrapVerdict, string> = {
 export default function DebtDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { householdId } = useSession();
   const [debt, setDebt] = useState<Debt | null>(null);
   const [tab, setTab] = useState<"ozet" | "icgoru">("ozet");
-  const [payAmount, setPayAmount] = useState("");
+  const [payOpen, setPayOpen] = useState(false);
   const [extraWhatIf, setExtraWhatIf] = useState("");
 
   const load = async () => {
@@ -46,18 +45,21 @@ export default function DebtDetail() {
 
   const balance = outstandingBalance({
     kind: debt.kind,
-    balance: Number(debt.balance),
-    installment: debt.installment,
-    termCount: debt.term_count,
-    firstInstallmentDate: debt.first_installment_date ? new Date(debt.first_installment_date) : null,
+    balance: Number(debt.current_balance ?? debt.balance),
+    installment: debt.monthly_installment ?? debt.installment,
+    termCount: debt.remaining_installment_count ?? debt.term_count,
+    firstInstallmentDate: debt.next_due_date
+      ? new Date(debt.next_due_date)
+      : debt.first_installment_date
+        ? new Date(debt.first_installment_date)
+        : null,
   });
-  const isInstallment = debt.kind === "loan" || debt.kind === "kmh_installment";
   const insightInput = {
     kind: debt.kind,
     balance,
     cardLimit: debt.card_limit,
-    installment: debt.installment,
-    userMinimum: debt.user_minimum,
+    installment: debt.monthly_installment ?? debt.installment,
+    userMinimum: debt.user_minimum_payment ?? debt.user_minimum,
     userMonthlyRate: debt.user_monthly_rate,
   };
   const minimum = mandatoryMinimum(insightInput);
@@ -66,24 +68,6 @@ export default function DebtDetail() {
   const trap = minimumTrap(insightInput);
   const extraVal = parseTRYInput(extraWhatIf) ?? 0;
   const avoided = extraVal > 0 ? avoidedInterestFromExtra(insightInput, extraVal) : 0;
-
-  const logPayment = async () => {
-    const amount = parseTRYInput(payAmount);
-    if (amount == null || amount <= 0) return;
-    const { error } = await supabase.from("payments").insert({
-      household_id: householdId!,
-      debt_id: debt.id,
-      amount,
-    });
-    if (error) return Alert.alert("Olmadı", error.message);
-    // Kart/KMH: bakiyeyi düş. Taksitli borçlarda kalan tutar programdan türetilir,
-    // ham balance'a dokunma.
-    if (!isInstallment) {
-      await supabase.from("debts").update({ balance: Math.max(0, balance - amount) }).eq("id", debt.id);
-    }
-    setPayAmount("");
-    load();
-  };
 
   const remove = () =>
     Alert.alert("Borcu sil", "Bu borç ve ödemeleri silinecek. Emin misin?", [
@@ -127,15 +111,11 @@ export default function DebtDetail() {
 
       {tab === "ozet" ? (
         <Card>
-          <Text style={styles.h}>Ödeme kaydet</Text>
-          <Field
-            label="Tutar"
-            value={payAmount}
-            onChangeText={setPayAmount}
-            keyboardType="numeric"
-            placeholder="örn. 5.000"
-          />
-          <Button title="Ödemeyi kaydet" onPress={logPayment} />
+          <Text style={styles.h}>Ödeme</Text>
+          <Text style={{ color: colors.inkSoft, marginBottom: spacing(1) }}>
+            Kalan: {formatTRY(balance)}
+          </Text>
+          <Button title="Ödeme kaydet" onPress={() => setPayOpen(true)} />
         </Card>
       ) : (
         <>
@@ -174,6 +154,15 @@ export default function DebtDetail() {
       )}
 
       <Button title="Borcu sil" variant="link" onPress={remove} />
+
+      <PaymentModal
+        visible={payOpen}
+        householdId={debt.household_id}
+        debt={debt}
+        occurrence={null}
+        onClose={() => setPayOpen(false)}
+        onSaved={load}
+      />
     </ScrollView>
   );
 }

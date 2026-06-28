@@ -102,3 +102,25 @@ npm run typecheck  # tsc --noEmit
 
 Yeni hesap kuralı eklerken önce `src/core/__tests__/engine.test.ts`. DB değişikliği
 `supabase/schema.sql` + RLS + (gerekirse) `rpc.sql`; tipleri `src/lib/database.types.ts`'e yansıt.
+
+## 10. Sahiplik · ödeme olayları · aksiyon panosu (MVP Revizyon v1.1)
+
+- **Sahiplik:** her finansal kayıtta `owner_type` ('person'|'household') + `person_id`.
+  Ortak kayıt bilinçli olarak `owner_type='household'` (null "belirsiz" değildir).
+  `OwnerSelect` ("Kime ait?") debts/assets/cash_flows/payments formlarında.
+- **Payment occurrence:** beklenen ödemeler `payment_occurrences` (pending/partial/paid/
+  overdue/skipped). Motor: `src/core/paymentOccurrences.ts` (generate / mandatory / status).
+  İstemci servisi `src/lib/occurrences.ts` (ensure idempotent + recordPayment + skip).
+  `payments` tablosu işlem geçmişi olarak kalır; ödeme kaydı occurrence + borç bakiyesi +
+  (taksitli) `remaining_installment_count`'u günceller, kalan 0 ise `is_active=false`.
+- **Kredi/taksitli KMH:** kullanıcı mevcut durumu girer — güncel kalan borç + aylık taksit +
+  kalan taksit + sıradaki ödeme tarihi. Normal KMH taksitli değildir.
+- **Borç alan adları:** yeni motorlar `current_balance` / `monthly_installment` /
+  `remaining_installment_count` / `next_due_date` kullanır; eski alanlar (balance/installment/
+  term_count/first_installment_date) geriye uyum için durur.
+- **Hatırlatma:** cron artık `payment_occurrences` üzerinden; yalnız pending/partial ve
+  7/3/1/son gün/gecikme penceresi + üye kapsamı (own/household/all). paid/skipped → bildirim yok.
+- **Navigasyon:** Pano (aksiyon) · Kişiler · Takvim · Varlıklar · Ayarlar + her sekmede "+ Ekle".
+  Pano grafik değil aksiyon odaklı: bu ay ödenecek, en acil 3 ödeme, net, kişi kartları,
+  gelecek 3 ay; grafikler en altta.
+- **Dil:** pazarlama metni ekranlara yazılmaz ("faiz tuzağından çık" vb. yok); sade ürün dili.

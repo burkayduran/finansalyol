@@ -1,10 +1,16 @@
-// Hane verisini çeken ve pano için türetilmiş değerleri hesaplayan hook.
+// Hane verisini çeken ve pano için türetilmiş (aksiyon odaklı) değerleri hesaplayan hook.
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
-import type { Asset, CashFlow, Debt, FxRate, Person } from "@/lib/database.types";
+import type {
+  Asset,
+  CashFlow,
+  Debt,
+  FxRate,
+  PaymentOccurrence,
+  Person,
+} from "@/lib/database.types";
 import { mandatoryMinimum } from "@/core/minimum";
-import { daysUntilDue } from "@/core/dates";
 import { outstandingBalance } from "@/core/installment";
 import { assetValueTRY, assetPnlTRY } from "@/core/assets";
 import {
@@ -13,68 +19,46 @@ import {
   type CashflowEntry,
   type MonthlyFlow,
 } from "@/core/cashflow";
-
-const DAY_MS = 86400000;
+import { ensureOccurrences } from "@/lib/occurrences";
 
 const toDebtOutstanding = (debt: Debt): number =>
   outstandingBalance({
     kind: debt.kind,
-    balance: Number(debt.balance),
-    installment: debt.installment,
-    termCount: debt.term_count,
-    firstInstallmentDate: debt.first_installment_date
-      ? new Date(debt.first_installment_date)
-      : null,
+    balance: Number(debt.current_balance ?? debt.balance),
+    installment: debt.monthly_installment ?? debt.installment,
+    termCount: debt.remaining_installment_count ?? debt.term_count,
+    firstInstallmentDate: debt.next_due_date
+      ? new Date(debt.next_due_date)
+      : debt.first_installment_date
+        ? new Date(debt.first_installment_date)
+        : null,
   });
 
-/**
- * Borcun bir sonraki ödeme gününe kalan gün. Taksit programı varsa GERÇEK taksit
- * tarihini kullanır (sadece due_day değil). Program bittiyse null döner.
- */
-function nextDueDays(debt: Debt): number | null {
-  if (
-    (debt.kind === "loan" || debt.kind === "kmh_installment") &&
-    debt.first_installment_date &&
-    debt.term_count != null
-  ) {
-    const first = new Date(debt.first_installment_date);
-    const last = new Date(first);
-    last.setMonth(last.getMonth() + Number(debt.term_count) - 1);
-    const today = new Date();
-    const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+const ownerKey = (r: { owner_type: string; person_id: string | null }) =>
+  r.owner_type === "household" ? "household" : r.person_id ?? "household";
 
-    let next = new Date(first.getFullYear(), first.getMonth(), first.getDate());
-    while (next < t0) {
-      if (next > last) return null;
-      next.setMonth(next.getMonth() + 1);
-    }
-    if (next > last && first < t0) return null;
-    return Math.round((next.getTime() - t0.getTime()) / DAY_MS);
-  }
-  return daysUntilDue(debt.due_day);
-}
-
-export interface UpcomingPayment {
-  debt: Debt;
-  days: number;
-  minimum: number;
-}
-
-export interface PersonBreakdown {
-  person: Person | null;
-  totalDebt: number;
-}
+const remainingDue = (o: PaymentOccurrence) => Math.max(0, Number(o.amount_due) - Number(o.amount_paid));
+const isOpen = (o: PaymentOccurrence) => o.status === "pending" || o.status === "partial" || o.status === "overdue";
 
 export interface AssetView {
   asset: Asset;
   valueTRY: number;
   pnlTRY: number | null;
 }
+export interface KindTotal { kind: string; value: number }
 
-export interface KindTotal {
-  kind: string;
-  value: number;
+export interface PersonCard {
+  key: string;
+  name: string;
+  isHousehold: boolean;
+  person: Person | null;
+  totalDebt: number;
+  totalAsset: number;
+  thisMonthPayment: number;
+  upcomingCount: number;
 }
+
+export interface MonthDue { month: Date; total: number }
 
 export interface HouseholdData {
   loading: boolean;
@@ -82,20 +66,22 @@ export interface HouseholdData {
   assets: Asset[];
   persons: Person[];
   cashFlows: CashFlow[];
+  occurrences: PaymentOccurrence[];
   fxRates: Record<string, FxRate>;
   totalDebt: number;
   totalAsset: number;
   net: number;
-  /** Bu ayın gelir − (düzenli gider + borç yükümlülüğü) neti. */
   monthlyNet: number;
+  /** Bu ay ödenecek toplam (occurrence kalanları). */
+  thisMonthDue: number;
+  /** En acil açık ödemeler (tarih sırası). */
+  urgentOccurrences: PaymentOccurrence[];
+  /** Gelecek 3 ay ödeme toplamları. */
+  next3Months: MonthDue[];
+  personCards: PersonCard[];
   assetViews: AssetView[];
-  /** Varlık dağılımı: asset.kind'a göre TRY toplam (donut için). */
   assetByKind: KindTotal[];
-  /** 12 aylık gelir-gider projeksiyonu (grafikler için). */
   projection: MonthlyFlow[];
-  upcoming: UpcomingPayment[];
-  byPerson: PersonBreakdown[];
-  /** 1 birim para birimi kaç TRY (TCMB alış). TRY → 1. */
   fxRateFor: (currency: string) => number;
   debtOutstanding: (debt: Debt) => number;
   reload: () => Promise<void>;
@@ -108,140 +94,128 @@ export function useHousehold(): HouseholdData {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [persons, setPersons] = useState<Person[]>([]);
   const [cashFlows, setCashFlows] = useState<CashFlow[]>([]);
+  const [occurrences, setOccurrences] = useState<PaymentOccurrence[]>([]);
   const [fxRates, setFxRates] = useState<Record<string, FxRate>>({});
 
   const reload = useCallback(async () => {
     if (!householdId) {
-      setDebts([]);
-      setAssets([]);
-      setPersons([]);
-      setCashFlows([]);
+      setDebts([]); setAssets([]); setPersons([]); setCashFlows([]); setOccurrences([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    const [d, a, p, c, fx] = await Promise.all([
-      supabase.from("debts").select("*").eq("household_id", householdId),
+    const debtRes = await supabase.from("debts").select("*").eq("household_id", householdId);
+    const debtList = debtRes.data ?? [];
+    // Beklenen ödeme olaylarını garanti et (idempotent), sonra oku.
+    try {
+      await ensureOccurrences(householdId, debtList);
+    } catch {
+      /* occurrence üretimi best-effort */
+    }
+    const [a, p, c, fx, occ] = await Promise.all([
       supabase.from("assets").select("*").eq("household_id", householdId),
       supabase.from("persons").select("*").eq("household_id", householdId),
       supabase.from("cash_flows").select("*").eq("household_id", householdId).eq("active", true),
       supabase.from("fx_rates").select("*"),
+      supabase.from("payment_occurrences").select("*").eq("household_id", householdId).order("due_date"),
     ]);
-    setDebts(d.data ?? []);
+    setDebts(debtList);
     setAssets(a.data ?? []);
     setPersons(p.data ?? []);
     setCashFlows(c.data ?? []);
     const fxMap: Record<string, FxRate> = {};
     for (const r of fx.data ?? []) fxMap[r.currency] = r;
     setFxRates(fxMap);
+    setOccurrences(occ.data ?? []);
     setLoading(false);
   }, [householdId]);
 
-  useEffect(() => {
-    reload();
-  }, [reload]);
+  useEffect(() => { reload(); }, [reload]);
 
-  const fxRateFor = (currency: string): number => {
-    if (!currency || currency === "TRY") return 1;
-    return Number(fxRates[currency]?.forex_buying ?? 1); // kur yoksa 1 (dönüştürme yok)
-  };
+  const fxRateFor = (currency: string): number =>
+    !currency || currency === "TRY" ? 1 : Number(fxRates[currency]?.forex_buying ?? 1);
 
-  // Borçlar: gerçek kalan bakiye (taksitli türetilir).
   const totalDebt = debts.reduce((s, x) => s + toDebtOutstanding(x), 0);
 
-  // Varlıklar: TRY değer + kâr/zarar.
   const assetViews: AssetView[] = assets.map((asset) => {
     const fx = fxRateFor(asset.currency);
     const input = {
-      kind: asset.kind,
-      balance: Number(asset.balance),
-      quantity: asset.quantity,
-      buyPrice: asset.buy_price,
-      lastPrice: asset.last_price,
+      kind: asset.kind, balance: Number(asset.balance),
+      quantity: asset.quantity, buyPrice: asset.buy_price, lastPrice: asset.last_price,
     };
     return { asset, valueTRY: assetValueTRY(input, fx), pnlTRY: assetPnlTRY(input, fx) };
   });
   const totalAsset = assetViews.reduce((s, v) => s + v.valueTRY, 0);
 
-  // Bu ayın net'i (gelir-gider projeksiyonu ilk ayı).
+  const kindMap = new Map<string, number>();
+  for (const v of assetViews) kindMap.set(v.asset.kind, (kindMap.get(v.asset.kind) ?? 0) + v.valueTRY);
+  const assetByKind: KindTotal[] = [...kindMap.entries()].map(([kind, value]) => ({ kind, value })).filter((k) => k.value > 0);
+
+  // Gelir-gider projeksiyonu (grafik + bu ay net).
   const cashflowEntries: CashflowEntry[] = cashFlows.map((c) => ({
     amount: Number(c.amount) * fxRateFor(c.currency),
-    direction: c.direction,
-    recurrence: c.recurrence,
+    direction: c.direction, recurrence: c.recurrence,
     occurredOn: c.occurred_on ? new Date(c.occurred_on) : undefined,
   }));
   const cashflowDebts: CashflowDebt[] = debts.map((d) => ({
     kind: d.kind,
     monthlyMinimum: mandatoryMinimum({
-      kind: d.kind,
-      balance: toDebtOutstanding(d),
-      cardLimit: d.card_limit,
-      installment: d.installment,
-      userMinimum: d.user_minimum,
+      kind: d.kind, balance: toDebtOutstanding(d), cardLimit: d.card_limit,
+      installment: d.monthly_installment ?? d.installment, userMinimum: d.user_minimum_payment ?? d.user_minimum,
     }),
-    installment: d.installment ?? undefined,
-    termCount: d.term_count ?? undefined,
-    firstInstallmentDate: d.first_installment_date
-      ? new Date(d.first_installment_date)
-      : undefined,
+    installment: (d.monthly_installment ?? d.installment) ?? undefined,
+    termCount: (d.remaining_installment_count ?? d.term_count) ?? undefined,
+    firstInstallmentDate: d.next_due_date ? new Date(d.next_due_date) : d.first_installment_date ? new Date(d.first_installment_date) : undefined,
   }));
   const projection = projectCashflow(cashflowEntries, cashflowDebts, 12);
   const monthlyNet = projection[0]?.net ?? 0;
 
-  // Varlık dağılımı (kind bazlı TRY toplam).
-  const kindMap = new Map<string, number>();
-  for (const v of assetViews) {
-    kindMap.set(v.asset.kind, (kindMap.get(v.asset.kind) ?? 0) + v.valueTRY);
+  // --- Occurrence türetmeleri (aksiyon odaklı pano) ---
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const inThisMonth = (o: PaymentOccurrence) => {
+    const d = new Date(o.due_date);
+    return d >= monthStart && d <= monthEnd;
+  };
+
+  const openOcc = occurrences.filter(isOpen);
+  const thisMonthDue = openOcc.filter(inThisMonth).reduce((s, o) => s + remainingDue(o), 0);
+  const urgentOccurrences = [...openOcc].sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 3);
+
+  const next3Months: MonthDue[] = [0, 1, 2].map((k) => {
+    const m = new Date(now.getFullYear(), now.getMonth() + k, 1);
+    const mEnd = new Date(now.getFullYear(), now.getMonth() + k + 1, 0);
+    const total = openOcc
+      .filter((o) => { const d = new Date(o.due_date); return d >= m && d <= mEnd; })
+      .reduce((s, o) => s + remainingDue(o), 0);
+    return { month: m, total };
+  });
+
+  // Kişi/Ortak kartları.
+  const buildCard = (key: string, name: string, isHousehold: boolean, person: Person | null): PersonCard => {
+    const debtMatch = (r: Debt) => ownerKey(r) === key;
+    const assetMatch = (v: AssetView) => ownerKey(v.asset) === key;
+    const occMatch = (o: PaymentOccurrence) => ownerKey(o) === key;
+    return {
+      key, name, isHousehold, person,
+      totalDebt: debts.filter(debtMatch).reduce((s, x) => s + toDebtOutstanding(x), 0),
+      totalAsset: assetViews.filter(assetMatch).reduce((s, v) => s + v.valueTRY, 0),
+      thisMonthPayment: openOcc.filter(occMatch).filter(inThisMonth).reduce((s, o) => s + remainingDue(o), 0),
+      upcomingCount: openOcc.filter(occMatch).length,
+    };
+  };
+  const personCards: PersonCard[] = persons.map((p) => buildCard(p.id, p.display_name, false, p));
+  const householdCard = buildCard("household", "Ortak / Hane", true, null);
+  if (householdCard.totalDebt > 0 || householdCard.totalAsset > 0 || householdCard.upcomingCount > 0) {
+    personCards.push(householdCard);
   }
-  const assetByKind: KindTotal[] = [...kindMap.entries()]
-    .map(([kind, value]) => ({ kind, value }))
-    .filter((k) => k.value > 0);
-
-  const upcoming: UpcomingPayment[] = debts
-    .map((debt) => ({
-      debt,
-      days: nextDueDays(debt),
-      minimum: mandatoryMinimum({
-        kind: debt.kind,
-        balance: toDebtOutstanding(debt),
-        cardLimit: debt.card_limit,
-        installment: debt.installment,
-        userMinimum: debt.user_minimum,
-      }),
-    }))
-    .filter((x) => x.days != null)
-    .sort((a, b) => (a.days as number) - (b.days as number))
-    .slice(0, 5) as UpcomingPayment[];
-
-  const byPerson: PersonBreakdown[] = persons.map((person) => ({
-    person,
-    totalDebt: debts
-      .filter((d) => d.person_id === person.id)
-      .reduce((s, x) => s + toDebtOutstanding(x), 0),
-  }));
-  const orphan = debts
-    .filter((d) => !d.person_id)
-    .reduce((s, x) => s + toDebtOutstanding(x), 0);
-  if (orphan > 0) byPerson.push({ person: null, totalDebt: orphan });
 
   return {
-    loading,
-    debts,
-    assets,
-    persons,
-    cashFlows,
-    fxRates,
-    totalDebt,
-    totalAsset,
-    net: totalAsset - totalDebt,
-    monthlyNet,
-    assetViews,
-    assetByKind,
-    projection,
-    upcoming,
-    byPerson,
-    fxRateFor,
-    debtOutstanding: toDebtOutstanding,
-    reload,
+    loading, debts, assets, persons, cashFlows, occurrences, fxRates,
+    totalDebt, totalAsset, net: totalAsset - totalDebt, monthlyNet,
+    thisMonthDue, urgentOccurrences, next3Months, personCards,
+    assetViews, assetByKind, projection,
+    fxRateFor, debtOutstanding: toDebtOutstanding, reload,
   };
 }

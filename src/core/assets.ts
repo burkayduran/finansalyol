@@ -6,12 +6,14 @@ export type AssetKind =
   | "deposit"
   | "fund"
   | "stock"
+  | "gold"
+  | "fx"
   | "commodity"
   | "crypto"
   | "other";
 
 /** Maliyet/fiyat bazlı (adet × birim fiyat) değerlenen türler. */
-export const PRICED_KINDS: AssetKind[] = ["fund", "stock", "commodity", "crypto"];
+export const PRICED_KINDS: AssetKind[] = ["fund", "stock", "gold", "commodity", "crypto"];
 
 export interface AssetValueInput {
   kind: AssetKind;

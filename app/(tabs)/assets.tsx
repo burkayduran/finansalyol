@@ -1,0 +1,85 @@
+import { useCallback, useState } from "react";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useHousehold } from "@/hooks/useHousehold";
+import { Button, Card } from "@/components/ui";
+import { formatTRY } from "@/core/format";
+import { formatShortDate } from "@/core/dates";
+import { depositYield } from "@/core/deposit";
+import { colors, spacing } from "@/theme";
+
+const KIND_LABELS: Record<string, string> = {
+  cash: "Nakit", deposit: "Mevduat", fund: "Fon", stock: "Hisse",
+  gold: "Altın", fx: "Döviz", commodity: "Emtia", crypto: "Kripto", other: "Diğer",
+};
+
+export default function Assets() {
+  const router = useRouter();
+  const data = useHousehold();
+  const [refreshing, setRefreshing] = useState(false);
+  useFocusEffect(useCallback(() => { data.reload(); }, [data.reload]));
+  const onRefresh = async () => { setRefreshing(true); await data.reload(); setRefreshing(false); };
+
+  return (
+    <ScrollView
+      contentContainerStyle={{ padding: spacing(2) }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
+      <Card>
+        <Text style={{ color: colors.inkSoft, fontSize: 14 }}>Toplam varlık</Text>
+        <Text style={{ color: colors.asset, fontSize: 30, fontWeight: "800" }}>{formatTRY(data.totalAsset)}</Text>
+      </Card>
+
+      {data.assetViews.length === 0 ? (
+        <Card><Text style={{ color: colors.muted }}>Henüz varlık yok.</Text></Card>
+      ) : (
+        <Card>
+          {data.assetViews.map(({ asset: a, valueTRY, pnlTRY }) => {
+            const dep =
+              a.kind === "deposit" && a.annual_rate != null && a.term_days != null
+                ? depositYield({
+                    principal: Number(a.balance), annualRate: Number(a.annual_rate),
+                    termDays: Number(a.term_days), stopaj: Number(a.stopaj ?? 0),
+                    startDate: a.start_date ? new Date(a.start_date) : undefined,
+                  })
+                : null;
+            const priced = ["fund", "stock", "gold", "commodity", "crypto"].includes(a.kind);
+            return (
+              <View key={a.id} style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.ink, fontWeight: "600" }}>{a.label}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13 }}>
+                    {KIND_LABELS[a.kind] ?? a.kind}
+                    {a.currency !== "TRY" ? ` · ${a.currency}` : ""}
+                  </Text>
+                  {dep && (
+                    <Text style={{ color: colors.muted, fontSize: 13 }}>
+                      Vade sonu ≈ {formatTRY(dep.maturityValue)} · {formatShortDate(dep.maturityDate)}
+                    </Text>
+                  )}
+                  {priced && a.last_price == null && (
+                    <Text style={{ color: colors.muted, fontSize: 13 }}>fiyat bekleniyor</Text>
+                  )}
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={{ color: colors.asset, fontWeight: "700" }}>{formatTRY(valueTRY)}</Text>
+                  {pnlTRY != null && (
+                    <Text style={{ color: pnlTRY >= 0 ? colors.ok : colors.danger, fontSize: 12, fontWeight: "700" }}>
+                      {pnlTRY >= 0 ? "▲ " : "▼ "}{formatTRY(Math.abs(pnlTRY))}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+        </Card>
+      )}
+
+      <Button title="+ Varlık ekle" onPress={() => router.push("/add-asset")} />
+    </ScrollView>
+  );
+}
+
+const styles = {
+  row: { flexDirection: "row" as const, alignItems: "center" as const, paddingVertical: spacing(1), borderTopWidth: 1, borderTopColor: colors.line },
+};

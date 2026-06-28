@@ -39,8 +39,8 @@ describe("BDDK minimum (limit tier)", () => {
   it("uses loan installment as mandatory", () => {
     expect(mandatoryMinimum({ kind: "loan", balance: 64000, installment: 8750 })).toBe(8750);
   });
-  it("treats kmh_installment like a loan (mandatory = installment)", () => {
-    expect(mandatoryMinimum({ kind: "kmh_installment", balance: 30000, installment: 5000 })).toBe(5000);
+  it("treats installment_kmh like a loan (mandatory = installment)", () => {
+    expect(mandatoryMinimum({ kind: "installment_kmh", balance: 30000, installment: 5000 })).toBe(5000);
   });
 });
 

@@ -32,7 +32,7 @@ export function mandatoryMinimum(input: MinimumInput): number {
   if (input.kind === "credit_card" && input.cardLimit != null) {
     base = Math.min(input.balance, input.balance * bddkMinimumRate(input.cardLimit));
   } else if (
-    (input.kind === "loan" || input.kind === "kmh_installment") &&
+    (input.kind === "loan" || input.kind === "installment_kmh") &&
     input.installment != null
   ) {
     // Taksitli KMH, kredi gibi davranır: zorunlu = taksit.

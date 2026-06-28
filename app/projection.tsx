@@ -19,7 +19,7 @@ export default function Projection() {
       debts
         .filter(
           (d) =>
-            (d.kind === "loan" || d.kind === "kmh_installment") &&
+            (d.kind === "loan" || d.kind === "installment_kmh") &&
             d.installment != null &&
             d.term_count != null &&
             d.first_installment_date != null

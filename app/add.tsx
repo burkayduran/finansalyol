@@ -23,6 +23,11 @@ export default function AddHub() {
         <Button title="+ Gider ekle" variant="ghost" onPress={() => router.push("/add-cashflow?direction=expense")} />
       </Card>
 
+      <Card>
+        <Text style={styles.group}>Aile</Text>
+        <Button title="+ Kişi ekle" variant="ghost" onPress={() => router.push("/family")} />
+      </Card>
+
       <View style={{ height: spacing(2) }} />
     </ScrollView>
   );

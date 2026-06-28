@@ -49,23 +49,22 @@ app/                         # expo-router ekranları (file-based routing)
 ├── _layout.tsx              # oturum + hane yönlendirme bekçisi
 ├── sign-in.tsx              # giriş / kayıt
 ├── onboarding.tsx           # hane kur / davetle katıl
-├── add-debt.tsx · add-asset.tsx · add-cashflow.tsx
-├── debt/[id].tsx            # borç detay + İçgörü sekmesi (asgari tuzağı)
-├── projection.tsx           # taksitli borç 12 aylık plan
-└── (tabs)/                  # Pano (grafikler) · Gelir-gider · Ekle (hub) · Aile · Ayarlar
+├── add.tsx (Ekle hub) · add-debt · add-asset · add-cashflow
+├── debt/[id].tsx · person/[id].tsx · projection.tsx · cashflow.tsx · family.tsx
+└── (tabs)/                  # Pano (aksiyon) · Kişiler · Takvim · Varlıklar · Ayarlar
+                             #   (+ Ekle başlık aksiyonu her sekmede)
 src/
 ├── core/                    # saf hesap motoru:
 │                            #   rateConfig (TCMB tavan) · minimum (BDDK) · interest
-│                            #   installment (taksit türetme) · projection (taksit planı)
-│                            #   deposit (mevduat getiri) · assets (değerleme/K-Z)
-│                            #   cashflow (gelir-gider) · currencies · banks · format · dates
+│                            #   installment · projection · paymentOccurrences (ödeme olayları)
+│                            #   deposit · assets · cashflow · fx · currencies · banks · format · dates
 ├── lib/                     # supabase client, db tipleri, push kaydı
 ├── hooks/useHousehold.ts    # pano verisi + türetilmiş değerler
 ├── providers/               # oturum + aktif hane bağlamı
 └── components/ (ui.tsx · charts.tsx — react-native-svg) · theme.ts
 supabase/
 ├── schema.sql               # tablolar + RLS (kanonik)
-├── migrations/              # 0002: taksitli KMH · 0003: varlık türleri+FX+gelir-gider · 0004: tek seferlik akış
+├── migrations/              # 0002-0004 + 0005: sahiplik (owner_type) · payment_occurrences · 7/3/1/son gün
 ├── rpc.sql                  # create_household / accept_invite / household_summary
 └── functions/
     ├── reminder-cron/       # günlük hatırlatma (push + e-posta)

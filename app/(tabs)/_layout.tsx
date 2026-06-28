@@ -1,9 +1,18 @@
-import { Text } from "react-native";
-import { Tabs } from "expo-router";
+import { Pressable, Text } from "react-native";
+import { Tabs, useRouter } from "expo-router";
 import { colors } from "@/theme";
 
 const icon = (glyph: string) => ({ color }: { color: string }) =>
   <Text style={{ fontSize: 20, color }}>{glyph}</Text>;
+
+function AddButton() {
+  const router = useRouter();
+  return (
+    <Pressable onPress={() => router.push("/add")} hitSlop={10} style={{ paddingHorizontal: 14 }}>
+      <Text style={{ color: colors.primary, fontWeight: "800", fontSize: 16 }}>+ Ekle</Text>
+    </Pressable>
+  );
+}
 
 export default function TabsLayout() {
   return (
@@ -13,28 +22,14 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.muted,
         headerStyle: { backgroundColor: colors.surface },
         headerTitleStyle: { color: colors.ink },
+        headerRight: () => <AddButton />,
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{ title: "Pano", tabBarIcon: icon("🏠"), headerTitle: "Aile panosu" }}
-      />
-      <Tabs.Screen
-        name="cashflow"
-        options={{ title: "Gelir-gider", tabBarIcon: icon("📊") }}
-      />
-      <Tabs.Screen
-        name="add"
-        options={{ title: "Ekle", tabBarIcon: icon("＋"), headerTitle: "Ekle" }}
-      />
-      <Tabs.Screen
-        name="family"
-        options={{ title: "Aile", tabBarIcon: icon("👪") }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{ title: "Ayarlar", tabBarIcon: icon("⚙️") }}
-      />
+      <Tabs.Screen name="index" options={{ title: "Pano", tabBarIcon: icon("🏠"), headerTitle: "Aile panosu" }} />
+      <Tabs.Screen name="people" options={{ title: "Kişiler", tabBarIcon: icon("👪") }} />
+      <Tabs.Screen name="calendar" options={{ title: "Takvim", tabBarIcon: icon("🗓️") }} />
+      <Tabs.Screen name="assets" options={{ title: "Varlıklar", tabBarIcon: icon("💰") }} />
+      <Tabs.Screen name="settings" options={{ title: "Ayarlar", tabBarIcon: icon("⚙️") }} />
     </Tabs>
   );
 }

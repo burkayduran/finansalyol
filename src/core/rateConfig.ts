@@ -7,7 +7,7 @@
 //   - Asgari tieri = KART LİMİTİ bazlı (BDDK %20/%40)          -> minimum.ts
 // İki ayrı sistem, karıştırma.
 
-export type DebtKind = "credit_card" | "kmh" | "kmh_installment" | "loan";
+export type DebtKind = "credit_card" | "kmh" | "installment_kmh" | "loan";
 
 export const RATE_SOURCE = {
   country: "TR",
@@ -35,7 +35,7 @@ export const CASH_ADVANCE_KMH_RATE = 0.0425;
 
 /** TCMB tavan oranı — dönem borcu (statement debt) bazlı tier seçimi. */
 export function tcmbCapRate(kind: DebtKind, balance: number): number {
-  if (kind === "kmh" || kind === "kmh_installment") return CASH_ADVANCE_KMH_RATE;
+  if (kind === "kmh" || kind === "installment_kmh") return CASH_ADVANCE_KMH_RATE;
   if (kind === "credit_card") {
     const tier = CREDIT_CARD_PURCHASE_TIERS.find(
       (t) => balance > (t.minStatementDebt ?? 0) && balance <= (t.maxStatementDebt ?? Infinity)

@@ -10,7 +10,7 @@ export interface CashflowEntry {
 }
 
 export interface CashflowDebt {
-  kind: "credit_card" | "kmh" | "kmh_installment" | "loan";
+  kind: "credit_card" | "kmh" | "installment_kmh" | "loan";
   /** Kart/KMH için her ay tekrar eden zorunlu (asgari) tutar. */
   monthlyMinimum?: number;
   /** Taksitli borçlar için program. */
@@ -32,7 +32,7 @@ const monthIndex = (d: Date) => d.getFullYear() * 12 + d.getMonth();
 /** Bir borcun belirli ay-indeksindeki yükümlülüğü. */
 function debtDueAt(debt: CashflowDebt, idx: number): number {
   if (
-    (debt.kind === "loan" || debt.kind === "kmh_installment") &&
+    (debt.kind === "loan" || debt.kind === "installment_kmh") &&
     debt.installment != null &&
     debt.termCount != null &&
     debt.firstInstallmentDate != null

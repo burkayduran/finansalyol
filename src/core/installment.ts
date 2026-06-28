@@ -1,5 +1,5 @@
 // Taksitli borç (kredi + taksitli KMH) türetmeleri.
-// loan/kmh_installment için kalan borç ELLE girilmez; toplam tutar + aylık taksit +
+// loan/installment_kmh için kalan borç ELLE girilmez; toplam tutar + aylık taksit +
 // taksit sayısı + ilk taksit tarihinden türetilir.
 
 import type { DebtKind } from "./rateConfig";
@@ -46,12 +46,12 @@ export interface OutstandingDebt {
 /**
  * Borcun GERÇEK kalan bakiyesi.
  *  - credit_card / kmh  -> debt.balance (ham)
- *  - loan / kmh_installment -> outstandingInstallment(...)
+ *  - loan / installment_kmh -> outstandingInstallment(...)
  * Dashboard toplam borç, kişi kırılımı ve projeksiyon BUNU kullanır (ham balance değil).
  */
 export function outstandingBalance(d: OutstandingDebt, today: Date = new Date()): number {
   if (
-    (d.kind === "loan" || d.kind === "kmh_installment") &&
+    (d.kind === "loan" || d.kind === "installment_kmh") &&
     d.installment != null &&
     d.termCount != null &&
     d.firstInstallmentDate != null

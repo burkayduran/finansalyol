@@ -119,18 +119,34 @@ create table if not exists public.debts (
   id                 uuid primary key default gen_random_uuid(),
   household_id       uuid not null references public.households (id) on delete cascade,
   person_id          uuid references public.persons (id) on delete set null,
-  kind               text not null check (kind in ('credit_card', 'kmh', 'kmh_installment', 'loan')),
-  bank               text not null,
+  owner_type         text not null default 'person' check (owner_type in ('person', 'household')),
+  kind               text not null check (kind in ('credit_card', 'kmh', 'installment_kmh', 'loan')),
+  bank               text not null,           -- geriye uyum (bank_name tercih edilir)
+  bank_code          text,
+  bank_name          text,
   label              text,
-  balance            numeric(14, 2) not null default 0,  -- loan/kmh_installment: türetilir
-  total_amount       numeric(14, 2),      -- toplam kredi/avans tutarı (taksitli)
+  note               text,
+  -- bakiye / tutar
+  balance            numeric(14, 2) not null default 0,  -- geriye uyum
+  current_balance    numeric(14, 2),          -- güncel kalan borç (yeni motorlar bunu kullanır)
+  original_amount    numeric(14, 2),          -- toplam kredi/avans tutarı
+  total_amount       numeric(14, 2),          -- geriye uyum
   card_limit         numeric(14, 2),
-  installment        numeric(14, 2),
-  term_count             int,             -- toplam taksit sayısı (loan / kmh_installment)
-  first_installment_date date,            -- ilk taksit tarihi (due_day buradan türer)
+  statement_day      int,                     -- ekstre kesim günü (kart)
+  -- taksit programı (loan / installment_kmh)
+  installment            numeric(14, 2),      -- geriye uyum
+  monthly_installment    numeric(14, 2),
+  term_count             int,                 -- geriye uyum
+  total_installment_count int,
+  remaining_installment_count int,
+  first_installment_date date,                -- geriye uyum
+  next_due_date          date,                -- sıradaki taksit tarihi
   due_day            int not null check (due_day between 1 and 31),
-  user_monthly_rate  numeric(6, 5),       -- kullanıcı oranı; fallback'i ezer
-  user_minimum       numeric(14, 2),
+  user_monthly_rate  numeric(8, 4),           -- kullanıcı oranı; fallback'i ezer
+  user_minimum       numeric(14, 2),          -- geriye uyum
+  user_minimum_payment numeric(14, 2),
+  reminder_enabled   boolean not null default true,
+  is_active          boolean not null default true,
   currency           text not null default 'TRY',
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
@@ -143,10 +159,11 @@ create index if not exists idx_debts_household on public.debts (household_id);
 create table if not exists public.assets (
   id            uuid primary key default gen_random_uuid(),
   household_id  uuid not null references public.households (id) on delete cascade,
+  owner_type    text not null default 'person' check (owner_type in ('person', 'household')),
   person_id     uuid references public.persons (id) on delete set null,
   label         text not null,
   kind          text not null default 'cash'
-                check (kind in ('cash', 'deposit', 'fund', 'stock', 'commodity', 'crypto', 'other')),
+                check (kind in ('cash', 'deposit', 'fund', 'stock', 'commodity', 'gold', 'fx', 'crypto', 'other')),
   balance       numeric(14, 2) not null default 0,  -- mevduatta = anapara
   annual_rate   numeric(6, 3),   -- yıllık faiz %, mevduat
   term_days     int,             -- vade (gün), mevduat
@@ -172,6 +189,9 @@ create table if not exists public.payments (
   id            uuid primary key default gen_random_uuid(),
   household_id  uuid not null references public.households (id) on delete cascade,
   debt_id       uuid not null references public.debts (id) on delete cascade,
+  occurrence_id uuid,  -- payment_occurrences.id (FK ayrı tanımlı; tablo aşağıda)
+  owner_type    text not null default 'household' check (owner_type in ('person', 'household')),
+  person_id     uuid references public.persons (id) on delete set null,
   amount        numeric(14, 2) not null check (amount > 0),
   paid_at       date not null default current_date,
   note          text,
@@ -198,24 +218,33 @@ create table if not exists public.notification_prefs (
   member_id      uuid primary key references public.profiles (id) on delete cascade,
   push_enabled   boolean not null default true,
   email_enabled  boolean not null default true,
-  days_before    int not null default 1 check (days_before between 0 and 7),
+  days_before    int not null default 1 check (days_before between 0 and 7), -- geriye uyum
   weekly_digest  boolean not null default true,
-  digest_weekday int not null default 1 check (digest_weekday between 0 and 6) -- 1 = Pazartesi
+  digest_weekday int not null default 1 check (digest_weekday between 0 and 6), -- 1 = Pazartesi
+  remind_7d      boolean not null default true,
+  remind_3d      boolean not null default true,
+  remind_1d      boolean not null default true,
+  remind_due_day boolean not null default true,
+  remind_overdue boolean not null default true,
+  scope          text not null default 'all' check (scope in ('own', 'household', 'all'))
 );
 
 -- ---------------------------------------------------------------------------
 -- reminders_log — gönderim idempotency (cron'un aynı bildirimi tekrar atmaması)
 -- ---------------------------------------------------------------------------
 create table if not exists public.reminders_log (
-  id          uuid primary key default gen_random_uuid(),
-  debt_id     uuid references public.debts (id) on delete cascade,
-  member_id   uuid not null references public.profiles (id) on delete cascade,
-  channel     text not null check (channel in ('push', 'email')),
-  kind        text not null check (kind in ('advance', 'due_day', 'weekly')),
-  due_date    date,
-  sent_at     timestamptz not null default now(),
+  id            uuid primary key default gen_random_uuid(),
+  debt_id       uuid references public.debts (id) on delete cascade,
+  occurrence_id uuid,  -- payment_occurrences.id (occurrence bazlı hatırlatma)
+  member_id     uuid not null references public.profiles (id) on delete cascade,
+  channel       text not null check (channel in ('push', 'email')),
+  kind          text not null,  -- occ_7d | occ_3d | occ_1d | occ_due | occ_overdue | weekly
+  due_date      date,
+  sent_at       timestamptz not null default now(),
   unique (debt_id, member_id, channel, kind, due_date)
 );
+create unique index if not exists uq_rl_occurrence
+  on public.reminders_log (occurrence_id, member_id, channel, kind);
 
 -- updated_at otomatik güncelleme
 create or replace function public.touch_updated_at()
@@ -290,6 +319,7 @@ create policy "reminders read" on public.reminders_log for select using (member_
 create table if not exists public.cash_flows (
   id           uuid primary key default gen_random_uuid(),
   household_id uuid not null references public.households (id) on delete cascade,
+  owner_type   text not null default 'person' check (owner_type in ('person', 'household')),
   person_id    uuid references public.persons (id) on delete set null,
   direction    text not null check (direction in ('income', 'expense')),
   category     text not null,
@@ -322,3 +352,41 @@ create table if not exists public.fx_rates (
 alter table public.fx_rates enable row level security;
 create policy "fx read" on public.fx_rates for select using (auth.role() = 'authenticated');
 -- yazma yalnız service role (cron); RLS bypass eder.
+
+-- ===========================================================================
+-- payment_occurrences — beklenen ödeme olayları (MVP Revizyon v1.1)
+-- ===========================================================================
+create table if not exists public.payment_occurrences (
+  id            uuid primary key default gen_random_uuid(),
+  household_id  uuid not null references public.households (id) on delete cascade,
+  debt_id       uuid references public.debts (id) on delete cascade,
+  owner_type    text not null default 'person' check (owner_type in ('person', 'household')),
+  person_id     uuid references public.persons (id) on delete set null,
+  due_date      date not null,
+  amount_due    numeric(14, 2) not null default 0,
+  amount_paid   numeric(14, 2) not null default 0,
+  status        text not null default 'pending'
+                check (status in ('pending', 'partial', 'paid', 'overdue', 'skipped')),
+  kind          text not null, -- credit_card_minimum | loan_installment | installment_kmh | kmh_manual | custom
+  installment_no     int,
+  total_installments int,
+  bank_code     text,
+  bank_name     text,
+  label         text,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index if not exists idx_po_household on public.payment_occurrences (household_id);
+create index if not exists idx_po_debt on public.payment_occurrences (debt_id);
+create index if not exists idx_po_due on public.payment_occurrences (due_date);
+create unique index if not exists uq_po_debt_due_kind
+  on public.payment_occurrences (debt_id, due_date, kind);
+
+drop trigger if exists touch_po on public.payment_occurrences;
+create trigger touch_po before update on public.payment_occurrences
+  for each row execute function public.touch_updated_at();
+
+alter table public.payment_occurrences enable row level security;
+create policy "po all" on public.payment_occurrences for all
+  using (public.is_household_member(household_id))
+  with check (public.is_household_member(household_id));
