@@ -7,6 +7,7 @@ import { BankSelect, Button, Card, Field, type BankValue } from "@/components/ui
 import { OwnerSelect, type OwnerValue } from "@/components/OwnerSelect";
 import { parseTRYInput, formatTRY } from "@/core/format";
 import { track } from "@/lib/analytics";
+import { ensureHousehold, handleSaveError } from "@/lib/errors";
 import { colors, spacing } from "@/theme";
 import type { DebtKind } from "@/lib/database.types";
 
@@ -105,6 +106,7 @@ export default function AddDebt() {
   const ownerValid = owner.ownerType === "household" || owner.personId != null;
 
   const save = async () => {
+    if (!ensureHousehold(householdId)) return;
     if (!ownerValid) return Alert.alert("Eksik", "Kime ait olduğunu seç.");
     if (!bank.name.trim()) return Alert.alert("Eksik", "Banka seç.");
 
@@ -170,7 +172,7 @@ export default function AddDebt() {
       ? await supabase.from("debts").update(base as never).eq("id", editId)
       : await supabase.from("debts").insert(base as never);
     setSaving(false);
-    if (error) return Alert.alert("Kaydedilemedi", "Borç kaydedilemedi. Lütfen tekrar dene.");
+    if (handleSaveError("add-debt", error, "Borç kaydedilemedi. Lütfen tekrar dene.")) return;
     if (!editId) track("debt_added", { debt_kind: kind, owner_type: owner.ownerType, has_bank_code: !!bank.code });
     router.back();
   };

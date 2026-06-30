@@ -21,3 +21,15 @@ export const colors = {
 
 export const radius = 16;
 export const spacing = (n: number) => n * 8;
+
+// Merkezi tipografi — tüm ekranlar bunu kullanır (tutarlılık).
+export const typography = {
+  screenTitle: { fontSize: 20, fontWeight: "800" as const },
+  cardTitle: { fontSize: 16, fontWeight: "800" as const },
+  heroAmount: { fontSize: 34, fontWeight: "800" as const },
+  statAmount: { fontSize: 20, fontWeight: "800" as const },
+  rowAmount: { fontSize: 15, fontWeight: "700" as const },
+  label: { fontSize: 12, fontWeight: "600" as const },
+  body: { fontSize: 14, fontWeight: "400" as const },
+  caption: { fontSize: 12, fontWeight: "400" as const },
+};

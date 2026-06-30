@@ -148,3 +148,23 @@ Yeni hesap kuralı eklerken önce `src/core/__tests__/engine.test.ts`. DB deği�
 - **Güven:** Hesabım'da Profil/Bildirim/Aile/Veri-güvenlik/Yasal/Destek; legal ekranlar
   (`app/legal/*`), veri dışa aktar (JSON), hesap silme talebi (`account_deletion_requests`).
 - **Onboarding:** hane → kişi chip'leri → bildirim; boş Özet yerine aksiyonlu empty state.
+
+## 12. Data-entry güvenilirliği & sade pano (MVP v1.4)
+
+- **RPC migration:** `create_household`/`accept_invite` vb. `supabase/migrations/0008_rpc_functions.sql`
+  ile deploy edilir (rpc.sql kopyası). Yeni kurulumda elle SQL gerekmez.
+- **Save guard'ları:** her formda kayıttan önce `ensureHousehold(householdId)` (src/lib/errors.ts);
+  `household_id: householdId!` tek başına kullanılmaz. Hatalar `handleSaveError(scope, error)` ile
+  loglanır — dev'de gerçek mesaj, prod'da sade Türkçe. `recordPayment` insert hatasında throw eder.
+- **DB write smoke test:** Hesabım'da yalnız `__DEV__` modda "Veri yazma testi" (user/household/
+  membership/read/insert/delete adımları).
+- **Pano (sade):** 1) Net Durum Hero (net renkli; borç/varlık eşit boyut, sakin ink, tıklanır →
+  /debts, /assets) 2) tek **Ödeme özeti** kartı (bu ay kalan/ödenen/toplam + yaklaşan 3 + gelecek 3 ay
+  mini + "Tümünü gör") 3) kompakt **Aile kırılımı** 4) en altta **Analizler**.
+- **Ödeme satırı:** buton metni **"Ödeme gir"** (kayıt = ödeme değil); "Bu ay atla" panoda yok
+  (Takvim'de kalır); buton küçük/tutarlı.
+- **Grafik etkileşimi:** `CashflowChart` barların üstünde şeffaf hit-area (tap → ay seçimi + detay).
+  Dağılım donut'u **kişi bazlı** (borç/varlık toggle); legend satırına dokun → merkez + detay değişir.
+- **Tipografi:** `src/theme.ts` `typography` token set'i (screenTitle/cardTitle/heroAmount/statAmount/…).
+- **Renk:** kişi/aile kartlarında yalnız **net durum** renkli; borç/varlık tutarları ink. Kişi detay
+  aksiyon butonları tek tip (ghost).

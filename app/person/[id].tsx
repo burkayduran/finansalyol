@@ -88,8 +88,8 @@ export default function PersonDetail() {
           {formatTRY(totalAsset - totalDebt)}
         </Text>
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: spacing(1) }}>
-          <Text style={{ color: colors.debt, fontWeight: "700" }}>Borç {formatTRY(totalDebt)}</Text>
-          <Text style={{ color: colors.asset, fontWeight: "700" }}>Varlık {formatTRY(totalAsset)}</Text>
+          <Text style={{ color: colors.ink, fontWeight: "700" }}>Borç {formatTRY(totalDebt)}</Text>
+          <Text style={{ color: colors.ink, fontWeight: "700" }}>Varlık {formatTRY(totalAsset)}</Text>
         </View>
       </Card>
 
@@ -146,7 +146,7 @@ export default function PersonDetail() {
       <Card>
         <Text style={styles.h}>Bu kişi için ekle</Text>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-          <View style={{ flexGrow: 1, minWidth: "47%" }}><Button title="+ Borç" onPress={() => router.push(`/add-debt${q}`)} /></View>
+          <View style={{ flexGrow: 1, minWidth: "47%" }}><Button title="+ Borç" variant="ghost" onPress={() => router.push(`/add-debt${q}`)} /></View>
           <View style={{ flexGrow: 1, minWidth: "47%" }}><Button title="+ Varlık" variant="ghost" onPress={() => router.push(`/add-asset${q}`)} /></View>
           <View style={{ flexGrow: 1, minWidth: "47%" }}><Button title="+ Gelir" variant="ghost" onPress={() => router.push(`/add-cashflow?direction=income&person=${id}`)} /></View>
           <View style={{ flexGrow: 1, minWidth: "47%" }}><Button title="+ Gider" variant="ghost" onPress={() => router.push(`/add-cashflow?direction=expense&person=${id}`)} /></View>

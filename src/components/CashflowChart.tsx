@@ -1,5 +1,5 @@
 // Nakit akışı grafiği — aya dokununca seçili ay detayı. Mobile press odaklı.
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { G, Line, Rect, Text as SvgText } from "react-native-svg";
 import { colors, spacing } from "@/theme";
 import { formatTRY } from "@/core/format";
@@ -33,28 +33,31 @@ export function CashflowChart({
 
   return (
     <View>
-      <Svg width="100%" height={height}>
-        <Line x1="0%" y1={chartH} x2="100%" y2={chartH} stroke={colors.line} strokeWidth={1} />
-        {data.map((m, i) => {
-          const base = i * groupW + groupW / 2;
-          const incomeH = (m.income / max) * (chartH - 4);
-          const outflowH = (m.outflow / max) * (chartH - 4);
-          const isSel = m.monthKey === selected?.monthKey;
-          return (
-            <G key={m.monthKey}>
-              <Rect x={`${base - barW - 0.6}%`} y={chartH - incomeH} width={`${barW}%`} height={incomeH} rx={3} fill={colors.asset} opacity={isSel ? 1 : 0.55} />
-              <Rect x={`${base + 0.6}%`} y={chartH - outflowH} width={`${barW}%`} height={outflowH} rx={3} fill={m.net < 0 ? colors.danger : colors.inkSoft} opacity={isSel ? 1 : 0.55} />
-              <SvgText x={`${base}%`} y={height - 3} fontSize={9} fill={isSel ? colors.ink : colors.muted} textAnchor="middle">{m.label}</SvgText>
-            </G>
-          );
-        })}
-      </Svg>
-
-      {/* Dokunulabilir ay şeridi */}
-      <View style={{ flexDirection: "row" }}>
-        {data.map((m) => (
-          <Pressable key={m.monthKey} onPress={() => onSelectMonth?.(m.monthKey)} style={{ flex: 1, height: 22 }} />
-        ))}
+      <View>
+        <Svg width="100%" height={height}>
+          <Line x1="0%" y1={chartH} x2="100%" y2={chartH} stroke={colors.line} strokeWidth={1} />
+          {data.map((m, i) => {
+            const base = i * groupW + groupW / 2;
+            const incomeH = (m.income / max) * (chartH - 4);
+            const outflowH = (m.outflow / max) * (chartH - 4);
+            const isSel = m.monthKey === selected?.monthKey;
+            return (
+              <G key={m.monthKey}>
+                <Rect x={`${base - barW - 0.6}%`} y={chartH - incomeH} width={`${barW}%`} height={incomeH} rx={3} fill={colors.asset} opacity={isSel ? 1 : 0.5} />
+                <Rect x={`${base + 0.6}%`} y={chartH - outflowH} width={`${barW}%`} height={outflowH} rx={3} fill={m.net < 0 ? colors.danger : colors.inkSoft} opacity={isSel ? 1 : 0.5} />
+                <SvgText x={`${base}%`} y={height - 3} fontSize={9} fontWeight={isSel ? "700" : "400"} fill={isSel ? colors.ink : colors.muted} textAnchor="middle">{m.label}</SvgText>
+              </G>
+            );
+          })}
+        </Svg>
+        {/* Barların üstünde şeffaf dokunma alanı (her ay komple tıklanır) */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <View style={{ flexDirection: "row", height: chartH }}>
+            {data.map((m) => (
+              <Pressable key={m.monthKey} onPress={() => onSelectMonth?.(m.monthKey)} style={{ flex: 1 }} />
+            ))}
+          </View>
+        </View>
       </View>
 
       {selected && (

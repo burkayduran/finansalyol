@@ -11,6 +11,7 @@ import { depositYield } from "@/core/deposit";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@/core/currencies";
 import { toTRY } from "@/core/fx";
 import { track } from "@/lib/analytics";
+import { ensureHousehold, handleSaveError } from "@/lib/errors";
 import { useFxRates } from "@/hooks/useFxRates";
 import { colors, spacing } from "@/theme";
 import type { AssetKind } from "@/lib/database.types";
@@ -103,6 +104,7 @@ export default function AddAsset() {
   const ownerValid = owner.ownerType === "household" || owner.personId != null;
 
   const save = async () => {
+    if (!ensureHousehold(householdId)) return;
     if (!ownerValid) return Alert.alert("Eksik", "Kime ait olduğunu seç.");
     if (!label.trim()) return Alert.alert("Eksik", "Bir açıklama gir.");
 
@@ -144,7 +146,7 @@ export default function AddAsset() {
       ? await supabase.from("assets").update(payload as never).eq("id", editId)
       : await supabase.from("assets").insert(payload as never);
     setSaving(false);
-    if (error) return Alert.alert("Kaydedilemedi", "Varlık kaydedilemedi. Lütfen tekrar dene.");
+    if (handleSaveError("add-asset", error, "Varlık kaydedilemedi. Lütfen tekrar dene.")) return;
     if (!editId) track("asset_added", { asset_kind: kind, owner_type: owner.ownerType });
     router.back();
   };

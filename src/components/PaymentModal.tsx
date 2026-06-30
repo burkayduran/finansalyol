@@ -1,4 +1,4 @@
-// Ödeme kaydet modalı. Bir occurrence ya da borç için ödeme yazar.
+// Ödeme gir modalı. Bir occurrence ya da borç için ödeme yazar.
 import { useMemo, useState } from "react";
 import { Alert, Modal, Pressable, Text, View } from "react-native";
 import { Button, Field } from "@/components/ui";
@@ -50,6 +50,7 @@ export function PaymentModal({
 
   const save = async () => {
     if (!debt) return;
+    if (!householdId) return Alert.alert("Hane bulunamadı", "Önce bir hane oluşturmalısın.");
     const amt = parseTRYInput(amount);
     if (amt == null || amt <= 0) return Alert.alert("Eksik", "Ödenen tutarı gir.");
     const d = parseDate(dateStr);
@@ -67,8 +68,11 @@ export function PaymentModal({
       setAmount(""); setNote(""); setDateStr(todayStr());
       onSaved();
       onClose();
-    } catch {
-      Alert.alert("Kaydedilemedi", "Ödeme kaydedilemedi. Lütfen tekrar dene.");
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("[payment-modal] record error", e);
+      const detail = (e as { message?: string })?.message;
+      Alert.alert("Kaydedilemedi", typeof __DEV__ !== "undefined" && __DEV__ && detail ? `Ödeme kaydedilemedi.\n\n[dev] ${detail}` : "Ödeme kaydedilemedi. Lütfen tekrar dene.");
     } finally {
       setSaving(false);
     }
@@ -78,7 +82,7 @@ export function PaymentModal({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
-          <Text style={styles.title}>Ödeme kaydet</Text>
+          <Text style={styles.title}>Ödeme gir</Text>
           {debt && (
             <Text style={{ color: colors.inkSoft, marginBottom: spacing(1) }}>
               {debt.label ?? debt.bank_name ?? debt.bank}

@@ -43,8 +43,8 @@ export default function People() {
                 {formatTRY(net)}
               </Text>
               <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: spacing(1) }}>
-                <Cell label="Borç" value={formatTRY(c.totalDebt)} color={colors.debt} />
-                <Cell label="Varlık" value={formatTRY(c.totalAsset)} color={colors.asset} />
+                <Cell label="Borç" value={formatTRY(c.totalDebt)} color={colors.ink} />
+                <Cell label="Varlık" value={formatTRY(c.totalAsset)} color={colors.ink} />
                 <Cell label="Bu ay ödeme" value={formatTRY(c.thisMonthPayment)} color={colors.ink} />
               </View>
               <Text style={{ color: colors.primary, fontWeight: "700", marginTop: spacing(1) }}>Detay →</Text>

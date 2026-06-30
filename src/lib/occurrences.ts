@@ -66,7 +66,7 @@ export interface RecordPaymentInput {
 export async function recordPayment(input: RecordPaymentInput): Promise<void> {
   const { householdId, debt, occurrence, amount, paidAt, note } = input;
 
-  await supabase.from("payments").insert({
+  const { error: payErr } = await supabase.from("payments").insert({
     household_id: householdId,
     debt_id: debt.id,
     occurrence_id: occurrence?.id ?? null,
@@ -76,6 +76,7 @@ export async function recordPayment(input: RecordPaymentInput): Promise<void> {
     paid_at: paidAt,
     note: note || null,
   });
+  if (payErr) throw payErr;
 
   if (occurrence) {
     const amount_paid = Number(occurrence.amount_paid) + amount;

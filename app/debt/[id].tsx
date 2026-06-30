@@ -117,7 +117,7 @@ export default function DebtDetail() {
           <Text style={{ color: colors.inkSoft, marginBottom: spacing(1) }}>
             Kalan: {formatTRY(balance)}
           </Text>
-          <Button title="Ödeme kaydet" onPress={() => setPayOpen(true)} />
+          <Button title="Ödeme gir" onPress={() => setPayOpen(true)} />
         </Card>
       ) : (
         <>

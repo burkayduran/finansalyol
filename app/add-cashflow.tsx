@@ -9,6 +9,7 @@ import { parseTRYInput, formatTRY } from "@/core/format";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@/core/currencies";
 import { toTRY } from "@/core/fx";
 import { track } from "@/lib/analytics";
+import { ensureHousehold, handleSaveError } from "@/lib/errors";
 import { useFxRates } from "@/hooks/useFxRates";
 import { colors, spacing } from "@/theme";
 import type { CashFlowDirection } from "@/lib/database.types";
@@ -108,6 +109,7 @@ export default function AddCashflow() {
   }, [amount, currency, fxRates]);
 
   const save = async () => {
+    if (!ensureHousehold(householdId)) return;
     if (!(owner.ownerType === "household" || owner.personId != null))
       return Alert.alert("Eksik", "Kime ait olduğunu seç.");
     const amountVal = parseTRYInput(amount);
@@ -135,7 +137,7 @@ export default function AddCashflow() {
       ? await supabase.from("cash_flows").update(payload).eq("id", editId)
       : await supabase.from("cash_flows").insert(payload);
     setSaving(false);
-    if (error) return Alert.alert("Kaydedilemedi", "Kayıt eklenemedi. Lütfen tekrar dene.");
+    if (handleSaveError("add-cashflow", error, "Kayıt eklenemedi. Lütfen tekrar dene.")) return;
     if (!editId) track("cashflow_item_added", { direction, recurrence });
     router.back();
   };

@@ -54,7 +54,7 @@ export function OccurrenceRow({
         <Text style={{ color: colors.ink, fontWeight: "700" }}>{formatTRY(remaining > 0 ? remaining : Number(occ.amount_due))}</Text>
         {!done && onPay && (
           <Pressable onPress={onPay} style={styles.payBtn}>
-            <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 13 }}>Ödeme kaydet</Text>
+            <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 13 }}>Ödeme gir</Text>
           </Pressable>
         )}
         {!done && onSkip && (
@@ -73,5 +73,5 @@ const styles = {
     paddingVertical: spacing(1), borderTopWidth: 1, borderTopColor: colors.line,
   },
   badge: { alignSelf: "flex-start" as const, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginTop: 4 },
-  payBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  payBtn: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8, backgroundColor: colors.primarySoft },
 };

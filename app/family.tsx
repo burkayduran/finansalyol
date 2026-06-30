@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { Button, Card, Field } from "@/components/ui";
 import { track } from "@/lib/analytics";
+import { ensureHousehold, handleSaveError } from "@/lib/errors";
 import { colors, spacing } from "@/theme";
 import type { Person } from "@/lib/database.types";
 
@@ -42,10 +43,11 @@ export default function Family() {
 
   const addPerson = async () => {
     if (!newPerson.trim()) return;
+    if (!ensureHousehold(householdId)) return;
     const { error } = await supabase
       .from("persons")
-      .insert({ household_id: householdId!, display_name: newPerson.trim() });
-    if (error) return Alert.alert("Olmadı", error.message);
+      .insert({ household_id: householdId, display_name: newPerson.trim() });
+    if (handleSaveError("add-person", error)) return;
     track("person_added");
     setNewPerson("");
     load();
@@ -74,17 +76,18 @@ export default function Family() {
 
   const createInvite = async () => {
     if (!inviteEmail.trim()) return Alert.alert("Eksik", "Davet için e-posta gir.");
+    if (!ensureHousehold(householdId)) return;
     const { data, error } = await supabase
       .from("household_invites")
-      .insert({ household_id: householdId!, email: inviteEmail.trim(), invited_by: (await supabase.auth.getUser()).data.user!.id })
+      .insert({ household_id: householdId, email: inviteEmail.trim(), invited_by: (await supabase.auth.getUser()).data.user!.id })
       .select("code")
       .single();
-    if (error) return Alert.alert("Olmadı", error.message);
+    if (handleSaveError("create-invite", error)) return;
     track("invite_sent");
     setInviteEmail("");
     load();
     Share.share({
-      message: `Ailemizin borç-takip hanesine katıl. Davet kodu: ${data.code}`,
+      message: `Ailemizin borç-takip hanesine katıl. Davet kodu: ${data?.code ?? ""}`,
     });
   };
 

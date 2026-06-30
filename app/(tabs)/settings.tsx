@@ -115,6 +115,36 @@ export default function Settings() {
       },
     ]);
 
+  const [smoke, setSmoke] = useState<string>("");
+  const runSmoke = async () => {
+    const lines: string[] = [];
+    const step = (name: string, ok: boolean, extra = "") => lines.push(`${name}: ${ok ? "OK" : "HATA"}${extra ? ` (${extra})` : ""}`);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      step("User", !!u.user);
+      step("Household", !!householdId, householdId ?? "yok");
+      if (householdId) {
+        const mem = await supabase.from("household_members").select("id").eq("household_id", householdId).eq("member_id", u.user!.id).maybeSingle();
+        step("Membership", !!mem.data);
+        const ppl = await supabase.from("persons").select("id").eq("household_id", householdId).limit(1);
+        step("Read people", !ppl.error);
+        const ins = await supabase.from("cash_flows").insert({
+          household_id: householdId, owner_type: "household", direction: "expense",
+          category: "other", label: "__smoke_test__", amount: 1, recurrence: "one_time",
+          occurred_on: new Date().toISOString().slice(0, 10),
+        }).select("id").single();
+        step("Insert test", !ins.error, ins.error?.message);
+        if (ins.data) {
+          const del = await supabase.from("cash_flows").delete().eq("id", ins.data.id);
+          step("Delete test", !del.error, del.error?.message);
+        }
+      }
+    } catch (e) {
+      lines.push(`İstisna: ${(e as { message?: string })?.message ?? "bilinmiyor"}`);
+    }
+    setSmoke(lines.join("\n"));
+  };
+
   const version = Constants.expoConfig?.version ?? "1.0.0";
 
   return (
@@ -196,6 +226,14 @@ export default function Settings() {
         <NavRow label="Geri bildirim / hata bildir" onPress={() => Linking.openURL(`mailto:${BRAND.supportEmail}?subject=${encodeURIComponent(BRAND.appName + " geri bildirim")}`)} />
         <Line label="Destek e-postası" value={BRAND.supportEmail} />
       </Card>
+
+      {typeof __DEV__ !== "undefined" && __DEV__ && (
+        <Card>
+          <Text style={styles.h}>Veri yazma testi (dev)</Text>
+          <Button title="Testi çalıştır" variant="ghost" onPress={runSmoke} />
+          {smoke ? <Text style={{ color: colors.inkSoft, fontFamily: "monospace" as const, marginTop: spacing(1) }}>{smoke}</Text> : null}
+        </Card>
+      )}
 
       <Card>
         <Text style={styles.h}>Uygulama bilgisi</Text>
