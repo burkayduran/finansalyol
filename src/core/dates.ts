@@ -1,5 +1,16 @@
 // Son ödeme günü -> kalan gün hesabı. Hatırlatma motoru da bunu kullanır.
 
+/** Yerel takvim gününü YYYY-MM-DD yazar (toISOString ASLA kullanma — UTC kayması). */
+export function toISODateLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** "YYYY-MM-DD" -> yerel Date (UTC parse tuzağına düşmeden). */
+export function parseISODateLocal(s: string): Date {
+  const [y, m, d] = s.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 /** Bir sonraki `dueDay` (ayın günü, 1–31) tarihine kalan gün sayısı. */
 export function daysUntilDue(dueDay: number, today: Date = new Date()): number {
   const y = today.getFullYear();

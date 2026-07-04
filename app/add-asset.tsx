@@ -3,10 +3,10 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
-import { Button, Card, Field, Select } from "@/components/ui";
+import { AmountField, Button, Card, Field, Select } from "@/components/ui";
 import { OwnerSelect, type OwnerValue } from "@/components/OwnerSelect";
 import { parseTRYInput, formatTRY } from "@/core/format";
-import { formatShortDate } from "@/core/dates";
+import { formatShortDate, toISODateLocal } from "@/core/dates";
 import { depositYield } from "@/core/deposit";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@/core/currencies";
 import { toTRY } from "@/core/fx";
@@ -133,7 +133,7 @@ export default function AddAsset() {
       annual_rate: isDeposit ? parseTRYInput(annualRate) : null,
       term_days: isDeposit && termDays ? Number(termDays) : null,
       stopaj: isDeposit ? parseTRYInput(stopaj) : null,
-      start_date: isDeposit ? new Date().toISOString().slice(0, 10) : null,
+      start_date: isDeposit ? toISODateLocal(new Date()) : null,
       symbol: kind === "fund" || kind === "stock" ? symbol.trim() || null : null,
       commodity_type: kind === "gold" ? "gold" : null,
       quantity: isPriced ? qty : null,
@@ -167,11 +167,10 @@ export default function AddAsset() {
         </View>
 
         {usesBalance && (
-          <Field
+          <AmountField
             label={isDeposit ? "Anapara" : kind === "fx" ? "Döviz tutarı" : "Tutar"}
             value={balance}
             onChangeText={setBalance}
-            keyboardType="numeric"
             placeholder="örn. 25.000"
           />
         )}
@@ -224,7 +223,7 @@ export default function AddAsset() {
         )}
       </Card>
       <Button title="Kaydet" onPress={save} loading={saving} />
-      {editId && <Button title="Varlığı sil" variant="link" onPress={removeItem} />}
+      {editId && <Button title="Varlığı sil" variant="link" danger onPress={removeItem} />}
     </ScrollView>
   );
 }

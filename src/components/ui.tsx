@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -11,6 +12,7 @@ import {
   View,
   type TextInputProps,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { colors, radius, spacing } from "@/theme";
 import { BANKS, OTHER_BANK, OTHER_BANK_CODE, type Bank } from "@/core/banks";
 
@@ -24,13 +26,16 @@ export function Button({
   variant = "primary",
   loading,
   disabled,
+  danger,
 }: {
   title: string;
   onPress: () => void;
   variant?: "primary" | "ghost" | "link";
   loading?: boolean;
   disabled?: boolean;
+  danger?: boolean; // yıkıcı aksiyon (sil/geri al) — link/ghost metni kırmızı
 }) {
+  const accent = danger ? colors.danger : colors.primary;
   return (
     <Pressable
       onPress={onPress}
@@ -45,12 +50,12 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === "primary" ? "#fff" : colors.primary} />
+        <ActivityIndicator color={variant === "primary" ? "#fff" : accent} />
       ) : (
         <Text
           style={[
             styles.btnText,
-            variant === "primary" ? { color: colors.primaryInk } : { color: colors.primary },
+            variant === "primary" ? { color: colors.primaryInk } : { color: accent },
           ]}
         >
           {title}
@@ -74,6 +79,60 @@ export function Field({
         {...props}
       />
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+    </View>
+  );
+}
+
+/** Tutar alanı — yazarken tr-TR binlik ayracıyla biçimlendirir (tam sayı TRY). */
+export function AmountField({
+  label, hint, value, onChangeText, placeholder,
+}: {
+  label: string; hint?: string; value: string;
+  onChangeText: (v: string) => void; placeholder?: string;
+}) {
+  const format = (t: string) => {
+    const digits = t.replace(/[^\d]/g, "");
+    return digits ? Number(digits).toLocaleString("tr-TR") : "";
+  };
+  return (
+    <Field
+      label={label} hint={hint} value={value} placeholder={placeholder}
+      keyboardType="numeric" onChangeText={(t) => onChangeText(format(t))}
+    />
+  );
+}
+
+/** Tarih alanı — native takvim. Değer Date tutulur; görünen GG.AA.YYYY. */
+export function DateField({
+  label, value, onChange, hint,
+}: {
+  label: string; value: Date | null; onChange: (d: Date) => void; hint?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const display = value
+    ? `${String(value.getDate()).padStart(2, "0")}.${String(value.getMonth() + 1).padStart(2, "0")}.${value.getFullYear()}`
+    : "";
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Pressable style={styles.input} onPress={() => setOpen(true)}>
+        <Text style={{ color: display ? colors.ink : colors.muted, fontSize: 16 }}>
+          {display || "GG.AA.YYYY"}
+        </Text>
+      </Pressable>
+      {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+      {open && (
+        <DateTimePicker
+          value={value ?? new Date()}
+          mode="date"
+          display="default"
+          onChange={(e, d) => {
+            setOpen(Platform.OS === "ios");
+            if (e.type === "set" && d) onChange(d);
+            if (e.type === "dismissed") setOpen(false);
+          }}
+        />
+      )}
     </View>
   );
 }

@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
 import { Alert, Pressable, ScrollView, Share, Text, View } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { Button, Card, Field } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { ensureHousehold, handleSaveError } from "@/lib/errors";
+import { useEntitlement, FREE_LIMITS } from "@/config/entitlements";
 import { colors, spacing } from "@/theme";
 import type { Person } from "@/lib/database.types";
 
@@ -17,6 +18,8 @@ interface Invite {
 }
 
 export default function Family() {
+  const router = useRouter();
+  const entitlement = useEntitlement();
   const { householdId } = useSession();
   const [persons, setPersons] = useState<Person[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
@@ -43,6 +46,9 @@ export default function Family() {
 
   const addPerson = async () => {
     if (!newPerson.trim()) return;
+    if (entitlement === "free" && persons.length >= FREE_LIMITS.maxPersons) {
+      return router.push("/paywall");
+    }
     if (!ensureHousehold(householdId)) return;
     const { error } = await supabase
       .from("persons")
@@ -75,6 +81,9 @@ export default function Family() {
     ]);
 
   const createInvite = async () => {
+    if (entitlement === "free" && !FREE_LIMITS.allowInvites) {
+      return router.push("/paywall");
+    }
     if (!inviteEmail.trim()) return Alert.alert("Eksik", "Davet için e-posta gir.");
     if (!ensureHousehold(householdId)) return;
     const { data, error } = await supabase

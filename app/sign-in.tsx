@@ -39,6 +39,19 @@ export default function SignIn() {
     }
   };
 
+  const forgotPassword = async () => {
+    if (!email) return Alert.alert("E-posta gir", "Sıfırlama bağlantısı için e-postanı yaz.");
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: "borctakipaile://reset-password",
+      });
+      if (error) throw error;
+      Alert.alert("Gönderildi", "Sıfırlama bağlantısı e-postana gönderildi.");
+    } catch {
+      Alert.alert("Olmadı", "Bağlantı gönderilemedi. E-postanı kontrol et.");
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -86,6 +99,9 @@ export default function SignIn() {
           variant="link"
           onPress={() => setMode(mode === "sign_in" ? "sign_up" : "sign_in")}
         />
+        {mode === "sign_in" && (
+          <Button title="Şifremi unuttum" variant="link" onPress={forgotPassword} />
+        )}
 
         <View style={{ height: insets.bottom + spacing(2) }} />
       </ScrollView>

@@ -1,28 +1,49 @@
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
+import * as Linking from "expo-linking";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider, useSession } from "@/providers/SessionProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { registerPushToken } from "@/lib/push";
+import { handleAuthUrl } from "@/lib/deepLinks";
+import { identify } from "@/lib/analytics";
 import { colors } from "@/theme";
 
 function RootNavigator() {
-  const { session, loading, householdId } = useSession();
+  const { session, loading, householdId, recovery } = useSession();
   const segments = useSegments();
   const router = useRouter();
 
-  // Oturum açıldıysa push token'ı kaydet.
+  // Oturum açıldıysa push token'ı kaydet + analytics identify (yalnız user_id).
   useEffect(() => {
-    if (session?.user.id) registerPushToken(session.user.id).catch(() => {});
+    if (session?.user.id) {
+      registerPushToken(session.user.id).catch(() => {});
+      identify(session.user.id);
+    }
   }, [session?.user.id]);
+
+  // Gelen auth deep-link'lerini işle (şifre sıfırlama vb.).
+  useEffect(() => {
+    Linking.getInitialURL().then(handleAuthUrl);
+    const sub = Linking.addEventListener("url", ({ url }) => handleAuthUrl(url));
+    return () => sub.remove();
+  }, []);
 
   // Yönlendirme bekçisi: oturum yoksa giriş; hane yoksa onboarding.
   useEffect(() => {
     if (loading) return;
     const inAuth = segments[0] === "sign-in";
     const inOnboarding = segments[0] === "onboarding";
+    const inReset = segments[0] === "reset-password";
+
+    // Şifre sıfırlama akışı: kullanıcıyı ana ekrana fırlatma, reset ekranında tut.
+    if (recovery) {
+      if (!inReset) router.replace("/reset-password");
+      return;
+    }
+    if (inReset) return;
 
     if (!session && !inAuth) {
       router.replace("/sign-in");
@@ -31,7 +52,7 @@ function RootNavigator() {
     } else if (session && householdId && (inAuth || inOnboarding)) {
       router.replace("/");
     }
-  }, [session, householdId, loading, segments]);
+  }, [session, householdId, loading, segments, recovery]);
 
   if (loading) {
     return (
@@ -44,6 +65,7 @@ function RootNavigator() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Screen name="sign-in" />
+      <Stack.Screen name="reset-password" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="add-debt" options={{ presentation: "modal", headerShown: true, title: "Borç ekle" }} />
@@ -60,6 +82,7 @@ function RootNavigator() {
       <Stack.Screen name="projection" options={{ headerShown: true, title: "Gelecek aylar" }} />
       <Stack.Screen name="cashflow" options={{ headerShown: true, title: "Nakit akışı" }} />
       <Stack.Screen name="family" options={{ headerShown: true, title: "Aile" }} />
+      <Stack.Screen name="paywall" options={{ presentation: "modal", headerShown: true, title: "Premium" }} />
     </Stack>
   );
 }

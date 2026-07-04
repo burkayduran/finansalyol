@@ -3,11 +3,12 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
-import { Button, Card, Field, Select } from "@/components/ui";
+import { AmountField, Button, Card, DateField, Field, Select } from "@/components/ui";
 import { OwnerSelect, type OwnerValue } from "@/components/OwnerSelect";
 import { parseTRYInput, formatTRY } from "@/core/format";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@/core/currencies";
 import { toTRY } from "@/core/fx";
+import { toISODateLocal, parseISODateLocal } from "@/core/dates";
 import { track } from "@/lib/analytics";
 import { ensureHousehold, handleSaveError } from "@/lib/errors";
 import { useFxRates } from "@/hooks/useFxRates";
@@ -37,19 +38,6 @@ const CATEGORIES: Record<CashFlowDirection, { value: string; label: string }[]> 
 
 const currencyOptions = CURRENCIES.map((c) => ({ value: c, label: c }));
 
-// "GG.AA.YYYY" -> Date | null
-function parseDate(s: string): Date | null {
-  const m = s.trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
-  if (!m) return null;
-  const [, dd, mm, yyyy] = m;
-  const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-  return d.getDate() === Number(dd) ? d : null;
-}
-const todayStr = () => {
-  const d = new Date();
-  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
-};
-
 export default function AddCashflow() {
   const router = useRouter();
   const navigation = useNavigation();
@@ -68,7 +56,7 @@ export default function AddCashflow() {
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
-  const [occurredOn, setOccurredOn] = useState(todayStr());
+  const [occurredOn, setOccurredOn] = useState<Date>(new Date());
   const [saving, setSaving] = useState(false);
 
   useLayoutEffect(() => {
@@ -88,10 +76,7 @@ export default function AddCashflow() {
       setLabel(data.label ?? "");
       setAmount(String(data.amount));
       setCurrency(data.currency);
-      if (data.occurred_on) {
-        const d = new Date(data.occurred_on);
-        setOccurredOn(`${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`);
-      }
+      if (data.occurred_on) setOccurredOn(parseISODateLocal(data.occurred_on));
     });
   }, [editId]);
 
@@ -116,9 +101,7 @@ export default function AddCashflow() {
     if (amountVal == null || amountVal < 0) return Alert.alert("Eksik", "Tutar gir.");
     let occurred: string | null = null;
     if (recurrence === "one_time") {
-      const d = parseDate(occurredOn);
-      if (!d) return Alert.alert("Eksik", "Tarihi GG.AA.YYYY gir.");
-      occurred = d.toISOString().slice(0, 10);
+      occurred = toISODateLocal(occurredOn);
     }
     setSaving(true);
     const payload = {
@@ -163,15 +146,14 @@ export default function AddCashflow() {
         </View>
 
         <Select label="Kategori" value={category} options={CATEGORIES[direction]} onChange={setCategory} />
-        <Field
+        <AmountField
           label={recurrence === "monthly" ? "Aylık tutar" : "Tutar"}
           value={amount}
           onChangeText={setAmount}
-          keyboardType="numeric"
           placeholder="örn. 50.000"
         />
         {recurrence === "one_time" && (
-          <Field label="Tarih" value={occurredOn} onChangeText={setOccurredOn} placeholder="GG.AA.YYYY" />
+          <DateField label="Tarih" value={occurredOn} onChange={setOccurredOn} />
         )}
         <Select label="Para birimi" value={currency} options={currencyOptions} onChange={setCurrency} />
         {currency !== "TRY" && (
@@ -184,7 +166,7 @@ export default function AddCashflow() {
         <Field label="Açıklama (opsiyonel)" value={label} onChangeText={setLabel} placeholder="örn. Ana maaş" />
       </Card>
       <Button title="Kaydet" onPress={save} loading={saving} />
-      {editId && <Button title="Kaydı sil" variant="link" onPress={removeItem} />}
+      {editId && <Button title="Kaydı sil" variant="link" danger onPress={removeItem} />}
     </ScrollView>
   );
 }

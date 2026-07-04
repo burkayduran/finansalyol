@@ -1,25 +1,14 @@
 // Ödeme gir modalı. Bir occurrence ya da borç için ödeme yazar.
 import { useMemo, useState } from "react";
 import { Alert, Modal, Pressable, Text, View } from "react-native";
-import { Button, Field } from "@/components/ui";
+import { AmountField, Button, DateField, Field } from "@/components/ui";
 import { parseTRYInput, formatTRY } from "@/core/format";
+import { toISODateLocal } from "@/core/dates";
 import { recordPayment } from "@/lib/occurrences";
 import { track } from "@/lib/analytics";
 import { debtInstallment } from "@/core/paymentOccurrences";
 import type { Debt, PaymentOccurrence } from "@/lib/database.types";
 import { colors, spacing } from "@/theme";
-
-function todayStr() {
-  const d = new Date();
-  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
-}
-function parseDate(s: string): Date | null {
-  const m = s.trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
-  if (!m) return null;
-  const [, dd, mm, yyyy] = m;
-  const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-  return d.getDate() === Number(dd) ? d : null;
-}
 
 export function PaymentModal({
   visible,
@@ -37,7 +26,7 @@ export function PaymentModal({
   onSaved: () => void;
 }) {
   const [amount, setAmount] = useState("");
-  const [dateStr, setDateStr] = useState(todayStr());
+  const [date, setDate] = useState<Date>(new Date());
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -53,19 +42,17 @@ export function PaymentModal({
     if (!householdId) return Alert.alert("Hane bulunamadı", "Önce bir hane oluşturmalısın.");
     const amt = parseTRYInput(amount);
     if (amt == null || amt <= 0) return Alert.alert("Eksik", "Ödenen tutarı gir.");
-    const d = parseDate(dateStr);
-    if (!d) return Alert.alert("Eksik", "Tarihi GG.AA.YYYY gir.");
     setSaving(true);
     try {
       await recordPayment({
         householdId, debt, occurrence: occurrence ?? null,
-        amount: amt, paidAt: d.toISOString().slice(0, 10), note,
+        amount: amt, paidAt: toISODateLocal(date), note,
       });
       track("payment_recorded", {
         payment_type: amt >= fullAmount ? "full" : "partial",
         occurrence_status_before: occurrence?.status,
       });
-      setAmount(""); setNote(""); setDateStr(todayStr());
+      setAmount(""); setNote(""); setDate(new Date());
       onSaved();
       onClose();
     } catch (e) {
@@ -91,15 +78,15 @@ export function PaymentModal({
 
           <View style={styles.quick}>
             {fullAmount > 0 && (
-              <Quick label={`Tamamı ${formatTRY(fullAmount)}`} onPress={() => setAmount(String(Math.round(fullAmount)))} />
+              <Quick label={`Tamamı ${formatTRY(fullAmount)}`} onPress={() => setAmount(Math.round(fullAmount).toLocaleString("tr-TR"))} />
             )}
             {installmentAmount > 0 && (
-              <Quick label={`Taksit ${formatTRY(installmentAmount)}`} onPress={() => setAmount(String(Math.round(installmentAmount)))} />
+              <Quick label={`Taksit ${formatTRY(installmentAmount)}`} onPress={() => setAmount(Math.round(installmentAmount).toLocaleString("tr-TR"))} />
             )}
           </View>
 
-          <Field label="Ödenen tutar" value={amount} onChangeText={setAmount} keyboardType="numeric" placeholder="örn. 8.750" />
-          <Field label="Tarih" value={dateStr} onChangeText={setDateStr} placeholder="GG.AA.YYYY" />
+          <AmountField label="Ödenen tutar" value={amount} onChangeText={setAmount} placeholder="örn. 8.750" />
+          <DateField label="Tarih" value={date} onChange={setDate} />
           <Field label="Not (opsiyonel)" value={note} onChangeText={setNote} placeholder="" />
 
           <Button title="Kaydet" onPress={save} loading={saving} />

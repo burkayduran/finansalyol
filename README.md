@@ -65,7 +65,7 @@ src/
 └── components/ (ui.tsx · charts.tsx — react-native-svg) · theme.ts
 supabase/
 ├── schema.sql               # tablolar + RLS (kanonik)
-├── migrations/              # 0002-0004 + 0005: sahiplik (owner_type) · payment_occurrences · 7/3/1/son gün
+├── migrations/              # 0002-0007 + 0008 (RPC) + 0009 (atomik ödeme record/reverse RPC)
 ├── rpc.sql                  # create_household / accept_invite / household_summary
 └── functions/
     ├── reminder-cron/       # günlük hatırlatma (push + e-posta)

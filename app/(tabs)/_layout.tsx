@@ -1,15 +1,19 @@
 import { Pressable, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { Tabs, useRouter } from "expo-router";
 import { colors } from "@/theme";
 
-const icon = (glyph: string) => ({ color }: { color: string }) =>
-  <Text style={{ fontSize: 20, color }}>{glyph}</Text>;
+type IoniconName = keyof typeof Ionicons.glyphMap;
+const tabIcon = (base: string, size = 24) =>
+  ({ color, focused }: { color: string; focused: boolean }) =>
+    <Ionicons name={(focused ? base : `${base}-outline`) as IoniconName} size={size} color={color} />;
 
 function AddButton() {
   const router = useRouter();
   return (
-    <Pressable onPress={() => router.push("/add")} hitSlop={10} style={{ paddingHorizontal: 14 }}>
-      <Text style={{ color: colors.primary, fontWeight: "800", fontSize: 16 }}>+ Ekle</Text>
+    <Pressable onPress={() => router.push("/add")} hitSlop={10} style={{ paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 4 }}>
+      <Ionicons name="add" size={18} color={colors.primary} />
+      <Text style={{ color: colors.primary, fontWeight: "800", fontSize: 16 }}>Ekle</Text>
     </Pressable>
   );
 }
@@ -25,11 +29,17 @@ export default function TabsLayout() {
         headerRight: () => <AddButton />,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Özet", tabBarIcon: icon("🏠"), headerTitle: "Aile özeti" }} />
-      <Tabs.Screen name="people" options={{ title: "Aile", tabBarIcon: icon("👪"), headerTitle: "Aile" }} />
-      <Tabs.Screen name="add" options={{ title: "Ekle", tabBarIcon: icon("＋"), headerTitle: "Yeni kayıt" }} />
-      <Tabs.Screen name="calendar" options={{ title: "Ödemeler", tabBarIcon: icon("🗓️"), headerTitle: "Ödeme planı" }} />
-      <Tabs.Screen name="settings" options={{ title: "Hesabım", tabBarIcon: icon("⚙️"), headerTitle: "Hesabım" }} />
+      <Tabs.Screen name="index" options={{ title: "Özet", tabBarIcon: tabIcon("home"), headerTitle: "Aile özeti" }} />
+      <Tabs.Screen name="people" options={{ title: "Aile", tabBarIcon: tabIcon("people"), headerTitle: "Aile" }} />
+      <Tabs.Screen
+        name="add"
+        options={{
+          title: "Ekle", headerTitle: "Yeni kayıt",
+          tabBarIcon: ({ color }) => <Ionicons name="add-circle" size={30} color={color} />,
+        }}
+      />
+      <Tabs.Screen name="calendar" options={{ title: "Ödemeler", tabBarIcon: tabIcon("calendar"), headerTitle: "Ödeme planı" }} />
+      <Tabs.Screen name="settings" options={{ title: "Hesabım", tabBarIcon: tabIcon("settings"), headerTitle: "Hesabım" }} />
     </Tabs>
   );
 }

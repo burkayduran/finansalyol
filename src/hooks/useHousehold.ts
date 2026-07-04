@@ -12,6 +12,7 @@ import type {
 } from "@/lib/database.types";
 import { mandatoryMinimum } from "@/core/minimum";
 import { outstandingBalance } from "@/core/installment";
+import { parseISODateLocal } from "@/core/dates";
 import { assetValueTRY, assetPnlTRY } from "@/core/assets";
 import {
   projectCashflow,
@@ -28,9 +29,9 @@ const toDebtOutstanding = (debt: Debt): number =>
     installment: debt.monthly_installment ?? debt.installment,
     termCount: debt.remaining_installment_count ?? debt.term_count,
     firstInstallmentDate: debt.next_due_date
-      ? new Date(debt.next_due_date)
+      ? parseISODateLocal(debt.next_due_date)
       : debt.first_installment_date
-        ? new Date(debt.first_installment_date)
+        ? parseISODateLocal(debt.first_installment_date)
         : null,
   });
 
@@ -159,7 +160,7 @@ export function useHousehold(): HouseholdData {
   const cashflowEntries: CashflowEntry[] = cashFlows.map((c) => ({
     amount: Number(c.amount) * fxRateFor(c.currency),
     direction: c.direction, recurrence: c.recurrence,
-    occurredOn: c.occurred_on ? new Date(c.occurred_on) : undefined,
+    occurredOn: c.occurred_on ? parseISODateLocal(c.occurred_on) : undefined,
   }));
   const cashflowDebts: CashflowDebt[] = debts.map((d) => ({
     kind: d.kind,
@@ -169,7 +170,7 @@ export function useHousehold(): HouseholdData {
     }),
     installment: (d.monthly_installment ?? d.installment) ?? undefined,
     termCount: (d.remaining_installment_count ?? d.term_count) ?? undefined,
-    firstInstallmentDate: d.next_due_date ? new Date(d.next_due_date) : d.first_installment_date ? new Date(d.first_installment_date) : undefined,
+    firstInstallmentDate: d.next_due_date ? parseISODateLocal(d.next_due_date) : d.first_installment_date ? parseISODateLocal(d.first_installment_date) : undefined,
   }));
   const projection = projectCashflow(cashflowEntries, cashflowDebts, 12);
   const monthlyNet = projection[0]?.net ?? 0;
@@ -179,7 +180,7 @@ export function useHousehold(): HouseholdData {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   const inThisMonth = (o: PaymentOccurrence) => {
-    const d = new Date(o.due_date);
+    const d = parseISODateLocal(o.due_date);
     return d >= monthStart && d <= monthEnd;
   };
 
@@ -191,13 +192,13 @@ export function useHousehold(): HouseholdData {
   const thisMonthOpenCount = openOcc.filter(inThisMonth).length;
   const weekEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
   const thisWeekCount = openOcc.filter((o) => {
-    const d = new Date(o.due_date);
+    const d = parseISODateLocal(o.due_date);
     return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) && d <= weekEnd;
   }).length;
 
   // Sıralama: gecikenler > bugün > en yakın due > kısmi > diğer bekleyenler.
   const rank = (o: PaymentOccurrence): number => {
-    const days = Math.round((new Date(o.due_date).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000);
+    const days = Math.round((parseISODateLocal(o.due_date).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000);
     if (o.status === "overdue" || days < 0) return 0;
     if (days === 0) return 1;
     if (o.status === "partial") return 3;
@@ -211,7 +212,7 @@ export function useHousehold(): HouseholdData {
     const m = new Date(now.getFullYear(), now.getMonth() + k, 1);
     const mEnd = new Date(now.getFullYear(), now.getMonth() + k + 1, 0);
     const total = openOcc
-      .filter((o) => { const d = new Date(o.due_date); return d >= m && d <= mEnd; })
+      .filter((o) => { const d = parseISODateLocal(o.due_date); return d >= m && d <= mEnd; })
       .reduce((s, o) => s + remainingDue(o), 0);
     return { month: m, total };
   });

@@ -3,9 +3,10 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
-import { BankSelect, Button, Card, Field, type BankValue } from "@/components/ui";
+import { AmountField, BankSelect, Button, Card, DateField, Field, type BankValue } from "@/components/ui";
 import { OwnerSelect, type OwnerValue } from "@/components/OwnerSelect";
 import { parseTRYInput, formatTRY } from "@/core/format";
+import { toISODateLocal, parseISODateLocal } from "@/core/dates";
 import { track } from "@/lib/analytics";
 import { ensureHousehold, handleSaveError } from "@/lib/errors";
 import { colors, spacing } from "@/theme";
@@ -18,14 +19,6 @@ const SEGMENTS: { key: DebtKind; label: string }[] = [
   { key: "loan", label: "Kredi" },
 ];
 const TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
-
-function parseDate(s: string): Date | null {
-  const m = s.trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
-  if (!m) return null;
-  const [, dd, mm, yyyy] = m;
-  const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-  return d.getDate() === Number(dd) ? d : null;
-}
 
 export default function AddDebt() {
   const router = useRouter();
@@ -49,7 +42,7 @@ export default function AddDebt() {
   const [installment, setInstallment] = useState("");
   const [remaining, setRemaining] = useState("");
   const [totalCount, setTotalCount] = useState("");
-  const [nextDue, setNextDue] = useState("");
+  const [nextDue, setNextDue] = useState<Date | null>(null);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -79,10 +72,7 @@ export default function AddDebt() {
       setRemaining(d.remaining_installment_count != null ? String(d.remaining_installment_count) : "");
       setTotalCount(d.total_installment_count != null ? String(d.total_installment_count) : "");
       const nd = d.next_due_date ?? d.first_installment_date;
-      if (nd) {
-        const x = new Date(nd);
-        setNextDue(`${String(x.getDate()).padStart(2, "0")}.${String(x.getMonth() + 1).padStart(2, "0")}.${x.getFullYear()}`);
-      }
+      if (nd) setNextDue(parseISODateLocal(nd));
     });
   }, [editId]);
 
@@ -96,9 +86,8 @@ export default function AddDebt() {
     if (!isInstallment) return null;
     const inst = parseTRYInput(installment);
     const rem = Number(remaining);
-    const nd = parseDate(nextDue);
-    if (!inst || !Number.isInteger(rem) || rem <= 0 || !nd) return null;
-    const end = new Date(nd);
+    if (!inst || !Number.isInteger(rem) || rem <= 0 || !nextDue) return null;
+    const end = new Date(nextDue);
     end.setMonth(end.getMonth() + rem - 1);
     return { outstanding: inst * rem, end };
   }, [isInstallment, installment, remaining, nextDue]);
@@ -130,17 +119,17 @@ export default function AddDebt() {
       const bal = parseTRYInput(balance);
       const inst = parseTRYInput(installment);
       const rem = Number(remaining);
-      const nd = parseDate(nextDue);
+      const nd = nextDue;
       if (bal == null || bal < 0) return Alert.alert("Eksik", "Güncel kalan borcu gir.");
       if (inst == null || inst <= 0) return Alert.alert("Eksik", "Aylık taksiti gir.");
       if (!Number.isInteger(rem) || rem <= 0) return Alert.alert("Eksik", "Kalan taksit sayısını gir.");
-      if (!nd) return Alert.alert("Eksik", "Sıradaki taksit tarihini GG.AA.YYYY gir.");
+      if (!nd) return Alert.alert("Eksik", "Sıradaki taksit tarihini seç.");
       Object.assign(base, {
         balance: bal, current_balance: bal,
         monthly_installment: inst, installment: inst,
         remaining_installment_count: rem,
         total_installment_count: totalCount ? Number(totalCount) : rem,
-        next_due_date: nd.toISOString().slice(0, 10),
+        next_due_date: toISODateLocal(nd),
         due_day: nd.getDate(),
       });
     } else if (kind === "credit_card") {
@@ -196,21 +185,21 @@ export default function AddDebt() {
 
         {kind === "credit_card" && (
           <>
-            <Field label="Dönem borcu" value={balance} onChangeText={setBalance} keyboardType="numeric" placeholder="örn. 28.400" />
-            <Field label="Kart limiti" value={cardLimit} onChangeText={setCardLimit} keyboardType="numeric" placeholder="örn. 90.000" hint="Asgari ödeme tahmini için kullanılır." />
+            <AmountField label="Dönem borcu" value={balance} onChangeText={setBalance} placeholder="örn. 28.400" />
+            <AmountField label="Kart limiti" value={cardLimit} onChangeText={setCardLimit} placeholder="örn. 90.000" hint="Asgari ödeme tahmini için kullanılır." />
             <Field label="Son ödeme günü" value={dueDay} onChangeText={setDueDay} keyboardType="numeric" placeholder="1–31" />
             <Field label="Ekstre kesim günü (ops.)" value={statementDay} onChangeText={setStatementDay} keyboardType="numeric" placeholder="ops." />
-            <Field label="Kullanıcı minimum ödeme (ops.)" value={userMin} onChangeText={setUserMin} keyboardType="numeric" placeholder="ops." />
+            <AmountField label="Kullanıcı minimum ödeme (ops.)" value={userMin} onChangeText={setUserMin} placeholder="ops." />
             <Field label="Kullanıcı faiz oranı % (ops.)" value={rate} onChangeText={setRate} keyboardType="numeric" placeholder="ops." />
           </>
         )}
 
         {isInstallment && (
           <>
-            <Field label="Güncel kalan borç" value={balance} onChangeText={setBalance} keyboardType="numeric" placeholder="örn. 64.000" />
-            <Field label="Aylık taksit" value={installment} onChangeText={setInstallment} keyboardType="numeric" placeholder="örn. 8.750" />
+            <AmountField label="Güncel kalan borç" value={balance} onChangeText={setBalance} placeholder="örn. 64.000" />
+            <AmountField label="Aylık taksit" value={installment} onChangeText={setInstallment} placeholder="örn. 8.750" />
             <Field label="Kalan taksit sayısı" value={remaining} onChangeText={setRemaining} keyboardType="numeric" placeholder="örn. 8" />
-            <Field label="Sıradaki taksit tarihi" value={nextDue} onChangeText={setNextDue} placeholder="GG.AA.YYYY" />
+            <DateField label="Sıradaki taksit tarihi" value={nextDue} onChange={setNextDue} />
             <Field label="Toplam taksit sayısı (ops.)" value={totalCount} onChangeText={setTotalCount} keyboardType="numeric" placeholder="ops." />
             {summary && (
               <View style={styles.summaryBox}>
@@ -225,9 +214,9 @@ export default function AddDebt() {
 
         {kind === "kmh" && (
           <>
-            <Field label="Kullanılan KMH tutarı" value={balance} onChangeText={setBalance} keyboardType="numeric" placeholder="örn. 22.000" />
+            <AmountField label="Kullanılan KMH tutarı" value={balance} onChangeText={setBalance} placeholder="örn. 22.000" />
             <Field label="Kontrol/son ödeme günü (ops.)" value={dueDay} onChangeText={setDueDay} keyboardType="numeric" placeholder="ops." />
-            <Field label="Kullanıcı minimum ödeme (ops.)" value={userMin} onChangeText={setUserMin} keyboardType="numeric" placeholder="ops." />
+            <AmountField label="Kullanıcı minimum ödeme (ops.)" value={userMin} onChangeText={setUserMin} placeholder="ops." />
             <Field label="Faiz oranı % (ops.)" value={rate} onChangeText={setRate} keyboardType="numeric" placeholder="ops." />
           </>
         )}
@@ -236,7 +225,7 @@ export default function AddDebt() {
       </Card>
 
       <Button title="Kaydet" onPress={save} loading={saving} />
-      {editId && <Button title="Borcu sil" variant="link" onPress={removeItem} />}
+      {editId && <Button title="Borcu sil" variant="link" danger onPress={removeItem} />}
     </ScrollView>
   );
 }

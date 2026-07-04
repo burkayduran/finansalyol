@@ -11,6 +11,9 @@ interface SessionValue {
   setHouseholdId: (id: string | null) => void;
   refreshHouseholds: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Şifre sıfırlama akışı aktif mi (deep link ile geldi). */
+  recovery: boolean;
+  clearRecovery: () => void;
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -19,6 +22,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [householdId, setHouseholdId] = useState<string | null>(null);
+  const [recovery, setRecovery] = useState(false);
 
   const refreshHouseholds = async () => {
     const { data } = await supabase
@@ -34,8 +38,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -55,8 +60,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         await supabase.auth.signOut();
       },
+      recovery,
+      clearRecovery: () => setRecovery(false),
     }),
-    [session, loading, householdId]
+    [session, loading, householdId, recovery]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

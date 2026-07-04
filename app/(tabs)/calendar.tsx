@@ -8,6 +8,7 @@ import { PaymentModal } from "@/components/PaymentModal";
 import { skipOccurrence } from "@/lib/occurrences";
 import { track } from "@/lib/analytics";
 import { formatTRY } from "@/core/format";
+import { parseISODateLocal } from "@/core/dates";
 import { colors, spacing } from "@/theme";
 import type { Debt, PaymentOccurrence, PaymentOccurrenceStatus } from "@/lib/database.types";
 
@@ -45,7 +46,7 @@ export default function Calendar() {
   const me = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   const monthAll = data.occurrences.filter((o) => {
-    const d = new Date(o.due_date);
+    const d = parseISODateLocal(o.due_date);
     return d >= ms && d <= me;
   });
 
@@ -80,9 +81,9 @@ export default function Calendar() {
     const map = new Map<string, PaymentOccurrence[]>();
     data.occurrences
       .filter((o) => o.status !== "skipped")
-      .filter((o) => new Date(o.due_date) > me)
+      .filter((o) => parseISODateLocal(o.due_date) > me)
       .forEach((o) => {
-        const d = new Date(o.due_date);
+        const d = parseISODateLocal(o.due_date);
         const key = `${d.getFullYear()}-${d.getMonth()}`;
         (map.get(key) ?? map.set(key, []).get(key)!).push(o);
       });
@@ -139,7 +140,7 @@ export default function Calendar() {
             byDay.map(([day, list]) => (
               <Card key={day}>
                 <Text style={styles.dayHeader}>
-                  {new Date(day).getDate()} {TR_MONTHS[new Date(day).getMonth()]}
+                  {parseISODateLocal(day).getDate()} {TR_MONTHS[parseISODateLocal(day).getMonth()]}
                 </Text>
                 {list.map((o) => (
                   <OccurrenceRow key={o.id} occ={o} personName={nameFor(o)} onPay={() => openPay(o)} onSkip={() => skipOccurrence(o.id).then(() => data.reload())} />

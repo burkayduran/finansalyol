@@ -156,7 +156,7 @@ export default function DebtDetail() {
       )}
 
       <Button title="Borcu düzenle" variant="ghost" onPress={() => router.push(`/add-debt?id=${debt.id}`)} />
-      <Button title="Borcu sil" variant="link" onPress={remove} />
+      <Button title="Borcu sil" variant="link" danger onPress={remove} />
 
       <PaymentModal
         visible={payOpen}

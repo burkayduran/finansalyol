@@ -1,5 +1,6 @@
 import { Pressable, Text, View } from "react-native";
 import { formatTRY } from "@/core/format";
+import { parseISODateLocal } from "@/core/dates";
 import { colors, spacing } from "@/theme";
 import type { PaymentOccurrence, PaymentOccurrenceStatus } from "@/lib/database.types";
 
@@ -12,7 +13,7 @@ const STATUS: Record<PaymentOccurrenceStatus, { label: string; color: string; bg
 };
 
 function daysLeft(dueISO: string): string {
-  const due = new Date(dueISO);
+  const due = parseISODateLocal(dueISO);
   const t0 = new Date();
   const diff = Math.round(
     (new Date(due.getFullYear(), due.getMonth(), due.getDate()).getTime() -

@@ -201,12 +201,6 @@ export type NotificationPrefs = {
   digest_weekday: number;
 }
 
-export type HouseholdSummary = {
-  total_debt: number;
-  total_asset: number;
-  net: number;
-}
-
 // Minimal Database tipi — supabase-js generic'i için yeterli yüzey.
 type Row<T> = { Row: T; Insert: Partial<T>; Update: Partial<T>; Relationships: [] };
 
@@ -262,7 +256,14 @@ export interface Database {
     Functions: {
       create_household: { Args: { p_name: string }; Returns: string };
       accept_invite: { Args: { p_code: string }; Returns: string };
-      household_summary: { Args: { hh: string }; Returns: HouseholdSummary[] };
+      record_payment: {
+        Args: {
+          p_household: string; p_debt: string; p_occurrence: string | null;
+          p_amount: number; p_paid_at: string; p_note: string | null;
+        };
+        Returns: undefined;
+      };
+      reverse_payment: { Args: { p_payment: string }; Returns: undefined };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

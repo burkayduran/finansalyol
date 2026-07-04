@@ -3,6 +3,7 @@
 // Saf & test edilebilir; DB'ye bağlı değil.
 
 import { bddkMinimumRate } from "./minimum";
+import { toISODateLocal, parseISODateLocal } from "./dates";
 import type { DebtKind } from "./rateConfig";
 
 export type OccStatus = "pending" | "partial" | "paid" | "overdue" | "skipped";
@@ -64,10 +65,10 @@ export const debtRemaining = (d: DebtForOcc): number | null =>
 
 function asDate(v: string | Date | null | undefined): Date | null {
   if (!v) return null;
-  const d = v instanceof Date ? v : new Date(v);
+  const d = v instanceof Date ? v : parseISODateLocal(v);
   return isNaN(d.getTime()) ? null : d;
 }
-const iso = (d: Date) => d.toISOString().slice(0, 10);
+const iso = (d: Date) => toISODateLocal(d);
 function addMonthsClamped(base: Date, n: number): Date {
   const day = base.getDate();
   const d = new Date(base.getFullYear(), base.getMonth() + n, 1);

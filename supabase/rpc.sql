@@ -49,17 +49,5 @@ begin
 end;
 $$;
 
--- Hane özeti: toplam borç, toplam varlık, net durum (pano kalbi).
-create or replace function public.household_summary(hh uuid)
-returns table (total_debt numeric, total_asset numeric, net numeric)
-language sql
-security definer set search_path = public
-stable
-as $$
-  select
-    coalesce((select sum(balance) from public.debts  where household_id = hh), 0) as total_debt,
-    coalesce((select sum(balance) from public.assets where household_id = hh), 0) as total_asset,
-    coalesce((select sum(balance) from public.assets where household_id = hh), 0)
-      - coalesce((select sum(balance) from public.debts where household_id = hh), 0) as net
-  where public.is_household_member(hh);
-$$;
+-- Not: household_summary kaldırıldı (0009). Net durum tek doğruluk kaynağı client
+-- core'dur (outstandingBalance mantığı); atomik ödeme RPC'leri 0009_payment_rpc.sql'de.

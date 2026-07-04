@@ -6,8 +6,10 @@ import Constants from "expo-constants";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { registerPushToken } from "@/lib/push";
+import { toISODateLocal } from "@/core/dates";
 import { track } from "@/lib/analytics";
 import { BRAND } from "@/config/brand";
+import { useEntitlement, FREE_LIMITS } from "@/config/entitlements";
 import { Button, Card, Field } from "@/components/ui";
 import { colors, spacing } from "@/theme";
 import type { NotificationPrefs } from "@/lib/database.types";
@@ -25,6 +27,7 @@ const SCOPES: { value: NotificationPrefs["scope"]; label: string }[] = [
 
 export default function Settings() {
   const router = useRouter();
+  const entitlement = useEntitlement();
   const { session, householdId, signOut } = useSession();
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULTS);
   const [pushStatus, setPushStatus] = useState("bilinmiyor");
@@ -131,7 +134,7 @@ export default function Settings() {
         const ins = await supabase.from("cash_flows").insert({
           household_id: householdId, owner_type: "household", direction: "expense",
           category: "other", label: "__smoke_test__", amount: 1, recurrence: "one_time",
-          occurred_on: new Date().toISOString().slice(0, 10),
+          occurred_on: toISODateLocal(new Date()),
         }).select("id").single();
         step("Insert test", !ins.error, ins.error?.message);
         if (ins.data) {
@@ -179,7 +182,10 @@ export default function Settings() {
         <Text style={styles.h}>Bildirimler</Text>
         <Row label="Push bildirimi" value={prefs.push_enabled} onChange={(v) => update({ push_enabled: v })} />
         <Row label="E-posta" value={prefs.email_enabled} onChange={(v) => update({ email_enabled: v })} />
-        <Row label="Haftalık özet" value={prefs.weekly_digest} onChange={(v) => update({ weekly_digest: v })} />
+        <Row label="Haftalık özet" value={prefs.weekly_digest} onChange={(v) => {
+          if (v && entitlement === "free" && !FREE_LIMITS.emailDigest) return router.push("/paywall");
+          update({ weekly_digest: v });
+        }} />
         <Text style={styles.sub}>Hatırlatma zamanları</Text>
         <Row label="7 gün önce" value={prefs.remind_7d} onChange={(v) => update({ remind_7d: v })} />
         <Row label="3 gün önce" value={prefs.remind_3d} onChange={(v) => update({ remind_3d: v })} />
@@ -211,14 +217,14 @@ export default function Settings() {
           Tüm borç, varlık, ödeme ve aile kayıtlarını dosya olarak indir.
         </Text>
         <Button title="Verilerimi indir" variant="ghost" onPress={exportData} />
-        <Button title="Hesabımı sil" variant="link" onPress={requestDeletion} />
+        <Button title="Hesabımı sil" variant="link" danger onPress={requestDeletion} />
       </Card>
 
       <Card>
         <Text style={styles.h}>Yasal metinler</Text>
-        <NavRow label="Gizlilik Politikası" onPress={() => router.push("/legal/privacy")} />
-        <NavRow label="KVKK Aydınlatma Metni" onPress={() => router.push("/legal/kvkk")} />
-        <NavRow label="Kullanım Şartları" onPress={() => router.push("/legal/terms")} />
+        <LegalRow label="Gizlilik Politikası" onOpen={() => router.push("/legal/privacy")} onWeb={() => Linking.openURL(BRAND.urls.privacy)} />
+        <LegalRow label="KVKK Aydınlatma Metni" onOpen={() => router.push("/legal/kvkk")} onWeb={() => Linking.openURL(BRAND.urls.kvkk)} />
+        <LegalRow label="Kullanım Şartları" onOpen={() => router.push("/legal/terms")} onWeb={() => Linking.openURL(BRAND.urls.terms)} />
       </Card>
 
       <Card>
@@ -268,6 +274,18 @@ function NavRow({ label, onPress }: { label: string; onPress: () => void }) {
       <Text style={{ color: colors.ink }}>{label}</Text>
       <Text style={{ color: colors.primary, fontWeight: "700" }}>›</Text>
     </Pressable>
+  );
+}
+function LegalRow({ label, onOpen, onWeb }: { label: string; onOpen: () => void; onWeb: () => void }) {
+  return (
+    <View style={styles.line}>
+      <Pressable onPress={onOpen} style={{ flex: 1 }}>
+        <Text style={{ color: colors.ink }}>{label}</Text>
+      </Pressable>
+      <Pressable onPress={onWeb} hitSlop={8}>
+        <Text style={{ color: colors.primary, fontWeight: "700" }}>tarayıcıda aç ↗</Text>
+      </Pressable>
+    </View>
   );
 }
 

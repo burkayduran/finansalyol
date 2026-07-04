@@ -168,3 +168,35 @@ Yeni hesap kuralı eklerken önce `src/core/__tests__/engine.test.ts`. DB deği�
 - **Tipografi:** `src/theme.ts` `typography` token set'i (screenTitle/cardTitle/heroAmount/statAmount/…).
 - **Renk:** kişi/aile kartlarında yalnız **net durum** renkli; borç/varlık tutarları ink. Kişi detay
   aksiyon butonları tek tip (ghost).
+
+## 13. Yayın hattı (FINALIZE v1.0)
+
+- **Tarih (P0):** date-only string'ler `src/core/dates.ts` `toISODateLocal`/`parseISODateLocal`
+  ile yazılır/okunur — `toISOString().slice(0,10)` YASAK (TR UTC+3'te bir gün kayar).
+  Test kapısı çift TZ: `npm test` (Europe/Istanbul) + `npm run test:utc`.
+- **Atomik ödeme:** `record_payment`/`reverse_payment` RPC (0009). Client tek `supabase.rpc`
+  çağırır; yarım kayıt yok. `household_summary` kaldırıldı (net durum tek kaynak = client core).
+- **Şifre sıfırlama:** sign-in "Şifremi unuttum" → `resetPasswordForEmail` (redirect
+  `borctakipaile://reset-password`). `SessionProvider` PASSWORD_RECOVERY bayrağı; bekçi bu
+  bayrakla `/reset-password`'a yönlendirir, ana ekrana fırlatmaz. Deep link `src/lib/deepLinks.ts`.
+  Supabase Dashboard → Auth → Redirect URLs'a scheme eklenmeli.
+- **Analytics:** PostHog EU (`EXPO_PUBLIC_POSTHOG_KEY`/`_HOST`); key yoksa dev console.
+  identify yalnız user_id; PII/tutar property gönderilmez.
+- **Legal URL:** `brand.ts.urls` (web'de barınan gizlilik/kvkk/kosullar); Hesabım'da "tarayıcıda aç".
+- **Monetization iskeleti:** `src/config/entitlements.ts` (`useEntitlement` şimdilik "premium",
+  davranış değişmez). Gate'ler: davet gönder, kişi ekle >maxPersons, haftalık özet → `/paywall`.
+  Gerçek IAP (RevenueCat) dev-build sonrası.
+
+### YAYIN KAPISI — marka/bundle (ilk EAS submit ÖNCESİ dondurulur, sonra ASLA değişmez)
+Karar verilince güncellenecek yerler:
+- `app.json`: name · slug · scheme · ios.bundleIdentifier · android.package
+- `src/config/brand.ts`: appName · urls domain
+- `scripts/gen-assets.mjs`: splash/icon rengi (marka)
+- yasal ekran başlıkları (`app/legal/*`) ve mağaza listeleme adı
+- `eas.json` + `app.json extra.eas.projectId` (gerçek `eas init` id'si — placeholder "0000..." kalmamalı)
+
+### Final test (yayın kapısı)
+`TZ=Europe/Istanbul npm test` + `TZ=UTC` yeşil · `typecheck` temiz · gerçek cihaz E2E
+(4 borç türü, taksit tarihi picker, occurrence doğru GÜN, kısmi/tam ödeme + geri al,
+push test, şifre sıfırlama, veri indir, hesap silme talebi) · `db:reset` 0001→0009 hatasız ·
+mağaza varlıkları (1024 ikon, splash, gizlilik URL) · Kapı #4 kapanmadan submit yok.

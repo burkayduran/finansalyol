@@ -3,7 +3,7 @@ import { parseTRYInput, formatTRY, formatPercent } from "../format";
 import { mandatoryMinimum, bddkMinimumRate } from "../minimum";
 import { resolveMonthlyRate, tcmbCapRate } from "../rateConfig";
 import { minimumTrap, avoidedInterestFromExtra } from "../interest";
-import { daysUntilDue } from "../dates";
+import { daysUntilDue, toISODateLocal, parseISODateLocal } from "../dates";
 import { depositYield } from "../deposit";
 import { projectMonths } from "../projection";
 import { installmentsPaid, outstandingInstallment, outstandingBalance, installmentsCoveredByPayment } from "../installment";
@@ -140,6 +140,21 @@ describe("minimum trap & extra", () => {
   it("computes avoided interest from extra payment", () => {
     const avoided = avoidedInterestFromExtra({ kind: "kmh", balance: 22000 }, 2000);
     expect(avoided).toBeCloseTo(2000 * 0.0425);
+  });
+});
+
+describe("yerel tarih serileştirme (TZ bug'ı)", () => {
+  it("toISODateLocal yerel takvim gününü yazar (UTC kayması yok)", () => {
+    // 15 Tem 2026 yerel gece yarısı -> her TZ'de 2026-07-15 olmalı
+    expect(toISODateLocal(new Date(2026, 6, 15))).toBe("2026-07-15");
+    expect(toISODateLocal(new Date(2026, 0, 1))).toBe("2026-01-01");
+    expect(toISODateLocal(new Date(2026, 11, 31))).toBe("2026-12-31");
+  });
+  it("parseISODateLocal round-trip", () => {
+    const s = "2026-07-25";
+    expect(toISODateLocal(parseISODateLocal(s))).toBe(s);
+    expect(parseISODateLocal(s).getDate()).toBe(25);
+    expect(parseISODateLocal(s).getMonth()).toBe(6);
   });
 });
 
