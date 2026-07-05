@@ -19,6 +19,7 @@ const GROUPS: { title: string; items: { title: string; desc: string; href: strin
       { title: "Gelir ekle", desc: "Maaş, kira geliri veya düzenli gelir.", href: "/add-cashflow?direction=income" },
       { title: "Gider ekle", desc: "Fatura, kira, aidat veya düzenli gider.", href: "/add-cashflow?direction=expense" },
       { title: "Varlıkları gör", desc: "Tüm birikim ve yatırımların.", href: "/assets" },
+      { title: "Nakit akışını gör", desc: "Aylık gelir–gider dengen ve projeksiyon.", href: "/cashflow" },
     ],
   },
   {

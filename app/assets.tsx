@@ -6,7 +6,7 @@ import { Button, Card } from "@/components/ui";
 import { formatTRY } from "@/core/format";
 import { formatShortDate } from "@/core/dates";
 import { depositYield } from "@/core/deposit";
-import { colors, spacing } from "@/theme";
+import { colors, spacing, typography } from "@/theme";
 
 const KIND_LABELS: Record<string, string> = {
   cash: "Nakit", deposit: "Mevduat", fund: "Fon", stock: "Hisse",
@@ -23,11 +23,11 @@ export default function Assets() {
   return (
     <ScrollView
       contentContainerStyle={{ padding: spacing(2) }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />}
     >
       <Card>
-        <Text style={{ color: colors.inkSoft, fontSize: 14 }}>Toplam varlık</Text>
-        <Text style={{ color: colors.asset, fontSize: 30, fontWeight: "800" }}>{formatTRY(data.totalAsset)}</Text>
+        <Text style={[typography.label, { color: colors.inkSoft }]}>Toplam varlık</Text>
+        <Text style={[typography.statAmount, { color: colors.asset }]}>{formatTRY(data.totalAsset)}</Text>
       </Card>
 
       {data.assetViews.length === 0 ? (

@@ -2,12 +2,14 @@ import { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
-import { Card } from "@/components/ui";
+import { Card, NavRow } from "@/components/ui";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { PaymentModal } from "@/components/PaymentModal";
+import { UpcomingBars, type WeekBar } from "@/components/charts";
 import { track } from "@/lib/analytics";
 import { formatTRY } from "@/core/format";
-import { parseISODateLocal } from "@/core/dates";
+import { parseISODateLocal, toISODateLocal } from "@/core/dates";
+import { useRouter } from "expo-router";
 import { colors, spacing } from "@/theme";
 import type { Debt, PaymentOccurrence, PaymentOccurrenceStatus } from "@/lib/database.types";
 
@@ -21,6 +23,7 @@ const FILTERS: { key: "all" | "pending" | "paid" | "overdue"; label: string }[] 
 
 export default function Calendar() {
   const data = useHousehold();
+  const router = useRouter();
   const [tab, setTab] = useState<"month" | "future">("month");
   const [filter, setFilter] = useState<"all" | "pending" | "paid" | "overdue">("all");
   const [openMonth, setOpenMonth] = useState<string | null>(null);
@@ -41,6 +44,7 @@ export default function Calendar() {
     o.owner_type === "household" ? "Ortak" : personName.get(o.person_id ?? "") ?? "—";
 
   const now = new Date();
+  const todayISO = toISODateLocal(now);
   const ms = new Date(now.getFullYear(), now.getMonth(), 1);
   const me = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
@@ -58,6 +62,27 @@ export default function Calendar() {
   const monthOverdue = monthAll
     .filter((o) => o.status === "overdue")
     .reduce((s, o) => s + Math.max(0, Number(o.amount_due) - Number(o.amount_paid)), 0);
+
+  // Bu ay — haftalık yığın (1-7, 8-14, 15-21, 22-31)
+  const weekBars: WeekBar[] = useMemo(() => {
+    const buckets: WeekBar[] = [
+      { label: "1–7", paid: 0, pending: 0, overdue: 0 },
+      { label: "8–14", paid: 0, pending: 0, overdue: 0 },
+      { label: "15–21", paid: 0, pending: 0, overdue: 0 },
+      { label: "22–31", paid: 0, pending: 0, overdue: 0 },
+    ];
+    monthAll.forEach((o) => {
+      if (o.status === "skipped") return;
+      const day = parseISODateLocal(o.due_date).getDate();
+      const b = day <= 7 ? 0 : day <= 14 ? 1 : day <= 21 ? 2 : 3;
+      const paidAmt = Number(o.amount_paid);
+      const remaining = Math.max(0, Number(o.amount_due) - paidAmt);
+      if (paidAmt > 0) buckets[b].paid += paidAmt;
+      if (o.status === "overdue") buckets[b].overdue += remaining;
+      else if (o.status === "pending" || o.status === "partial") buckets[b].pending += remaining;
+    });
+    return buckets;
+  }, [data.occurrences]);
 
   const matchFilter = (o: PaymentOccurrence) => {
     if (filter === "all") return true;
@@ -125,6 +150,12 @@ export default function Calendar() {
             </View>
           </Card>
 
+          {monthAll.length > 0 && (
+            <Card>
+              <UpcomingBars weeks={weekBars} />
+            </Card>
+          )}
+
           <View style={styles.filters}>
             {FILTERS.map((f) => (
               <Pressable key={f.key} onPress={() => setFilter(f.key)} style={[styles.chip, filter === f.key && styles.chipActive]}>
@@ -136,16 +167,26 @@ export default function Calendar() {
           {byDay.length === 0 ? (
             <Card><Text style={{ color: colors.muted }}>Bu filtrede ödeme yok.</Text></Card>
           ) : (
-            byDay.map(([day, list]) => (
+            byDay.map(([day, list]) => {
+              const isToday = day === todayISO;
+              return (
               <Card key={day}>
-                <Text style={styles.dayHeader}>
-                  {parseISODateLocal(day).getDate()} {TR_MONTHS[parseISODateLocal(day).getMonth()]}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                  <Text style={[styles.dayHeader, isToday && { marginBottom: 0 }]}>
+                    {parseISODateLocal(day).getDate()} {TR_MONTHS[parseISODateLocal(day).getMonth()]}
+                  </Text>
+                  {isToday && (
+                    <View style={styles.todayBadge}>
+                      <Text style={styles.todayBadgeText}>Bugün</Text>
+                    </View>
+                  )}
+                </View>
                 {list.map((o) => (
                   <OccurrenceRow key={o.id} occ={o} personName={nameFor(o)} onPay={() => openPay(o)} />
                 ))}
               </Card>
-            ))
+              );
+            })
           )}
         </>
       ) : (
@@ -169,6 +210,9 @@ export default function Calendar() {
               </Card>
             ))
           )}
+          <Card>
+            <NavRow title="Nakit akışı detayı →" onPress={() => router.push("/cashflow")} />
+          </Card>
         </>
       )}
 
@@ -203,5 +247,7 @@ const styles = {
   chipActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   chipText: { color: colors.inkSoft, fontWeight: "600" as const, fontSize: 13 },
   dayHeader: { fontWeight: "800" as const, color: colors.ink, marginBottom: 2 },
+  todayBadge: { borderWidth: 1, borderColor: colors.accent, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  todayBadgeText: { color: colors.accent, fontSize: 11, fontWeight: "700" as const },
   row: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const },
 };

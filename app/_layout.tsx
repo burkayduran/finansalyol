@@ -57,7 +57,7 @@ function RootNavigator() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", backgroundColor: colors.bg }}>
-        <ActivityIndicator color={colors.primary} size="large" />
+        <ActivityIndicator color={colors.accent} size="large" />
       </View>
     );
   }

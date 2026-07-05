@@ -4,7 +4,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
 import { formatTRY } from "@/core/format";
-import { colors, spacing } from "@/theme";
+import { colors, spacing, typography } from "@/theme";
 
 export default function People() {
   const router = useRouter();
@@ -16,11 +16,11 @@ export default function People() {
   return (
     <ScrollView
       contentContainerStyle={{ padding: spacing(2) }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />}
     >
       {data.personCards.length === 0 && (
         <Card>
-          <Text style={{ color: colors.inkSoft }}>Henüz kişi yok. Aile bölümünden kişi ekle.</Text>
+          <Text style={[typography.label, { color: colors.inkSoft }]}>Henüz kişi yok. Aile bölümünden kişi ekle.</Text>
         </Card>
       )}
 
@@ -33,21 +33,21 @@ export default function People() {
           >
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ fontSize: 17, fontWeight: "800", color: colors.ink }}>{c.name}</Text>
-                <Text style={{ color: colors.inkSoft, fontSize: 12 }}>
+                <Text style={[typography.cardTitle, { color: colors.ink }]}>{c.name}</Text>
+                <Text style={[typography.label, { color: colors.inkSoft }]}>
                   {c.upcomingCount > 0 ? `${c.upcomingCount} yaklaşan` : "yaklaşan yok"}
                 </Text>
               </View>
-              <Text style={{ color: colors.inkSoft, fontSize: 12, marginTop: spacing(0.5) }}>Net durum</Text>
-              <Text style={{ color: net < 0 ? colors.danger : colors.asset, fontSize: 20, fontWeight: "800" }}>
+              <Text style={[typography.label, { color: colors.inkSoft, marginTop: spacing(1) }]}>Net durum</Text>
+              <Text style={{ color: net < 0 ? colors.danger : colors.asset, fontSize: 18, fontWeight: "800" }}>
                 {formatTRY(net)}
               </Text>
               <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: spacing(1) }}>
-                <Cell label="Borç" value={formatTRY(c.totalDebt)} color={colors.ink} />
-                <Cell label="Varlık" value={formatTRY(c.totalAsset)} color={colors.ink} />
-                <Cell label="Bu ay ödeme" value={formatTRY(c.thisMonthPayment)} color={colors.ink} />
+                <Cell label="Borç" value={formatTRY(c.totalDebt)} />
+                <Cell label="Varlık" value={formatTRY(c.totalAsset)} />
+                <Cell label="Bu ay ödeme" value={formatTRY(c.thisMonthPayment)} />
               </View>
-              <Text style={{ color: colors.primary, fontWeight: "700", marginTop: spacing(1) }}>Detay →</Text>
+              <Text style={{ color: colors.accent, fontWeight: "700", fontSize: 13, marginTop: spacing(1) }}>Detay →</Text>
             </Card>
           </Pressable>
         );
@@ -58,11 +58,11 @@ export default function People() {
   );
 }
 
-function Cell({ label, value, color }: { label: string; value: string; color: string }) {
+function Cell({ label, value }: { label: string; value: string }) {
   return (
     <View>
-      <Text style={{ color: colors.inkSoft, fontSize: 12 }}>{label}</Text>
-      <Text style={{ color, fontWeight: "700" }}>{value}</Text>
+      <Text style={[typography.label, { color: colors.inkSoft }]}>{label}</Text>
+      <Text style={{ color: colors.ink, fontSize: 14, fontWeight: "700" }}>{value}</Text>
     </View>
   );
 }

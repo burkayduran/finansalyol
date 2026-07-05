@@ -22,20 +22,20 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
         headerStyle: { backgroundColor: colors.surface },
         headerTitleStyle: { color: colors.ink },
         headerRight: () => <AddButton />,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Özet", tabBarIcon: tabIcon("home"), headerTitle: "Aile özeti" }} />
+      <Tabs.Screen name="index" options={{ title: "Özet", tabBarIcon: tabIcon("home"), headerTitle: "Özet" }} />
       <Tabs.Screen name="people" options={{ title: "Aile", tabBarIcon: tabIcon("people"), headerTitle: "Aile" }} />
       <Tabs.Screen
         name="add"
         options={{
           title: "Ekle", headerTitle: "Yeni kayıt",
-          tabBarIcon: ({ color }) => <Ionicons name="add-circle" size={30} color={color} />,
+          tabBarIcon: () => <Ionicons name="add-circle" size={30} color={colors.primary} />,
         }}
       />
       <Tabs.Screen name="calendar" options={{ title: "Ödemeler", tabBarIcon: tabIcon("calendar"), headerTitle: "Ödeme planı" }} />

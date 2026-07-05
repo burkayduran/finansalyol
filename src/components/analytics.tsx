@@ -42,7 +42,7 @@ export function Donut({ personCards, colors: palette }: { personCards: PersonCar
 
       <Ring
         data={slices}
-        size={150}
+        size={160}
         centerValue={selected.value}
         centerLabel={selected.label}
       />
@@ -52,8 +52,8 @@ export function Donut({ personCards, colors: palette }: { personCards: PersonCar
           <Pressable key={s.label} onPress={() => setSel(i)} style={[styles.legendRow, i === idx && { backgroundColor: colors.bg }]}>
             <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: s.color, marginRight: 8 }} />
             <Text style={{ color: colors.ink, fontSize: 13, flex: 1, fontWeight: i === idx ? "700" : "400" }}>{s.label}</Text>
-            <Text style={{ color: colors.inkSoft, fontSize: 13, marginRight: 8 }}>{formatTRY(s.value)}</Text>
-            <Text style={{ color: colors.muted, fontSize: 13, width: 44, textAlign: "right" }}>%{Math.round((s.value / total) * 100)}</Text>
+            <Text style={{ color: colors.ink, fontSize: 13, marginRight: 8 }}>{formatTRY(s.value)}</Text>
+            <Text style={{ color: colors.inkSoft, fontSize: 13, width: 44, textAlign: "right" }}>%{Math.round((s.value / total) * 100)}</Text>
           </Pressable>
         ))}
       </View>
@@ -78,7 +78,7 @@ export function CashflowChartWrap({ projection, onDetail }: { projection: Monthl
       <CashflowChart data={months} selectedMonthKey={sel} onSelectMonth={setSel} />
       {onDetail && (
         <Pressable onPress={onDetail}>
-          <Text style={{ color: colors.primary, fontWeight: "700", textAlign: "center", marginTop: 8 }}>Detayı gör →</Text>
+          <Text style={{ color: colors.accent, fontWeight: "700", textAlign: "center", marginTop: 8 }}>Detayı gör →</Text>
         </Pressable>
       )}
     </Card>
@@ -88,7 +88,7 @@ export function CashflowChartWrap({ projection, onDetail }: { projection: Monthl
 const styles = {
   toggle: { flexDirection: "row" as const, gap: 6, marginVertical: spacing(1) },
   seg: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.bg, alignItems: "center" as const },
-  segActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
+  segActive: { backgroundColor: colors.primarySoft, borderColor: colors.accent },
   segText: { color: colors.inkSoft, fontWeight: "600" as const, fontSize: 13 },
   legendRow: { flexDirection: "row" as const, alignItems: "center" as const, paddingVertical: 6, paddingHorizontal: 6, borderRadius: 8 },
 };

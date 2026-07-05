@@ -35,7 +35,13 @@ export function Button({
   disabled?: boolean;
   danger?: boolean; // yıkıcı aksiyon (sil/geri al) — link/ghost metni kırmızı
 }) {
-  const accent = danger ? colors.danger : colors.primary;
+  // Bakır = yönlendirme rengi: üçüncül link'ler bakır. Ghost = birincil-yakın (lacivert).
+  // Yıkıcı (danger) her zaman kırmızı.
+  const textColor = danger
+    ? colors.danger
+    : variant === "link"
+      ? colors.accent
+      : colors.primary;
   return (
     <Pressable
       onPress={onPress}
@@ -50,17 +56,27 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === "primary" ? "#fff" : accent} />
+        <ActivityIndicator color={variant === "primary" ? "#fff" : textColor} />
       ) : (
         <Text
           style={[
             styles.btnText,
-            variant === "primary" ? { color: colors.primaryInk } : { color: accent },
+            variant === "primary" ? { color: colors.primaryInk } : { color: textColor },
           ]}
         >
           {title}
         </Text>
       )}
+    </Pressable>
+  );
+}
+
+/** Üçüncül yönlendirme satırı — bakır metin + chevron. Bir sonraki ekrana götürür. */
+export function NavRow({ title, onPress }: { title: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.navRow}>
+      <Text style={{ color: colors.accent, fontWeight: "700", fontSize: 14 }}>{title}</Text>
+      <Text style={{ color: colors.accent, fontWeight: "700", fontSize: 14 }}>›</Text>
     </Pressable>
   );
 }
@@ -305,4 +321,10 @@ export const styles = StyleSheet.create({
     maxHeight: "70%",
   },
   modalRow: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.line },
+  navRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
 });

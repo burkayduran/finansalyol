@@ -38,18 +38,26 @@ export default function Dashboard() {
 
   const empty = data.debts.length === 0 && data.assets.length === 0;
 
+  const ratioTotal = data.totalAsset + data.totalDebt;
+
   return (
     <ScrollView
       contentContainerStyle={{ padding: spacing(2) }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />}
     >
-      {/* 1 — Net Durum Hero */}
+      {/* 1 — Net Durum Hero + oran çubuğu */}
       <Card>
         <Text style={styles.label}>Net durum</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginVertical: 2 }}>
           <Text style={[typography.heroAmount, { color: colors.ink }]}>{formatTRY(data.net)}</Text>
           <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: data.net < 0 ? colors.danger : colors.asset }} />
         </View>
+        {ratioTotal > 0 && (
+          <View style={styles.ratioBar}>
+            <View style={{ flex: Math.max(0.001, data.totalAsset), backgroundColor: colors.asset }} />
+            <View style={{ flex: Math.max(0.001, data.totalDebt), backgroundColor: colors.debt }} />
+          </View>
+        )}
         <View style={styles.statRow}>
           <Pressable style={{ flex: 1 }} onPress={() => router.push("/debts")}>
             <Text style={styles.label}>Toplam borç ›</Text>
@@ -74,7 +82,10 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* 2 — Ödeme Özeti (tek kart) */}
+      {/* 2 — Varlık vs Borç görseli (kişi bazlı donut) */}
+      {!empty && <Donut personCards={data.personCards} colors={SLICE_COLORS} />}
+
+      {/* 3 — Ödeme Özeti (tek kart) */}
       {!empty && (
         <Card>
           <Text style={typography.cardTitle}>Ödeme özeti</Text>
@@ -109,46 +120,28 @@ export default function Dashboard() {
           {data.next3Months.some((m) => m.total > 0) && (
             <>
               <Text style={[styles.label, { marginTop: spacing(2) }]}>Gelecek aylar</Text>
-              <Text style={{ color: colors.inkSoft }}>
-                {data.next3Months.map((m) => `${TR_MONTHS[m.month.getMonth()]} ${formatTRY(m.total)}`).join("  ·  ")}
-              </Text>
+              <View style={styles.chipRow}>
+                {data.next3Months.map((m, i) => (
+                  <View key={m.month.toISOString()} style={[styles.monthChip, i === 0 && styles.monthChipCurrent]}>
+                    <Text style={{ color: colors.ink, fontSize: 13 }}>
+                      {TR_MONTHS[m.month.getMonth()]} {formatTRY(m.total)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </>
           )}
 
           <Pressable onPress={() => router.push("/calendar")} style={{ paddingTop: spacing(1.5) }}>
-            <Text style={{ color: colors.primary, fontWeight: "700" }}>Tümünü gör →</Text>
+            <Text style={styles.tertiaryLink}>Tümünü gör →</Text>
           </Pressable>
         </Card>
       )}
 
-      {/* 3 — Aile kırılımı (kompakt) */}
-      {data.personCards.length > 0 && (
-        <Card>
-          <Text style={typography.cardTitle}>Aile kırılımı</Text>
-          {data.personCards.map((c) => {
-            const net = c.totalAsset - c.totalDebt;
-            return (
-              <Pressable
-                key={c.key}
-                style={styles.personRow}
-                onPress={() => router.push(c.isHousehold ? "/household" : `/person/${c.person!.id}`)}
-              >
-                <Text style={{ color: colors.ink, fontWeight: "700" }}>{c.name}</Text>
-                <Text style={{ color: colors.inkSoft, fontSize: 13 }}>
-                  Net <Text style={{ color: net < 0 ? colors.danger : colors.asset, fontWeight: "700" }}>{formatTRY(net)}</Text>
-                  {"  ·  Bu ay "}{formatTRY(c.thisMonthPayment)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </Card>
-      )}
-
-      {/* 4 — Analizler (kompakt, en altta) */}
+      {/* 4 — Grafikler (nakit akışı) */}
       {!empty && (
         <>
-          <Text style={[typography.cardTitle, { marginTop: spacing(1), marginBottom: spacing(0.5) }]}>Analizler</Text>
-          <Donut personCards={data.personCards} colors={SLICE_COLORS} />
+          <Text style={[typography.cardTitle, { marginTop: spacing(1), marginBottom: spacing(0.5) }]}>Grafikler</Text>
           <CashflowChartWrap projection={data.projection} onDetail={() => router.push("/cashflow")} />
         </>
       )}
@@ -171,5 +164,9 @@ const styles = {
   cta: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center" as const },
   progressTrack: { height: 8, borderRadius: 4, backgroundColor: colors.line, marginTop: spacing(0.75), overflow: "hidden" as const },
   progressFill: { height: 8, borderRadius: 4, backgroundColor: colors.accent },
-  personRow: { paddingVertical: spacing(1), borderTopWidth: 1, borderTopColor: colors.line },
+  ratioBar: { flexDirection: "row" as const, height: 6, borderRadius: 3, overflow: "hidden" as const, backgroundColor: colors.line, marginTop: spacing(1) },
+  chipRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 6, marginTop: 4 },
+  monthChip: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: colors.primarySoft },
+  monthChipCurrent: { borderColor: colors.accent },
+  tertiaryLink: { color: colors.accent, fontWeight: "700" as const },
 };

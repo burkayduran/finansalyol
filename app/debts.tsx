@@ -5,7 +5,7 @@ import { useHousehold } from "@/hooks/useHousehold";
 import { Card } from "@/components/ui";
 import { formatTRY } from "@/core/format";
 import { getMandatoryAmountForDebt, type DebtForOcc } from "@/core/paymentOccurrences";
-import { colors, spacing } from "@/theme";
+import { colors, spacing, typography } from "@/theme";
 import type { Debt, DebtKind } from "@/lib/database.types";
 
 const KIND_LABELS: Record<DebtKind, string> = {
@@ -53,8 +53,8 @@ export default function Debts() {
   return (
     <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
       <Card>
-        <Text style={{ color: colors.inkSoft, fontSize: 14 }}>Toplam borç</Text>
-        <Text style={{ color: colors.debt, fontSize: 30, fontWeight: "800" }}>{formatTRY(data.totalDebt)}</Text>
+        <Text style={[typography.label, { color: colors.inkSoft }]}>Toplam borç</Text>
+        <Text style={[typography.statAmount, { color: colors.debt }]}>{formatTRY(data.totalDebt)}</Text>
         <Text style={{ color: colors.inkSoft, fontSize: 13 }}>{activeDebts.length} aktif borç</Text>
       </Card>
 

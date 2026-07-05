@@ -1,8 +1,9 @@
 import { useCallback, useMemo } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
-import { Button, Card } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { CashflowChartWrap } from "@/components/analytics";
 import { mandatoryMinimum } from "@/core/minimum";
 import { projectCashflow, type CashflowDebt, type CashflowEntry } from "@/core/cashflow";
@@ -59,12 +60,8 @@ export default function Cashflow() {
       </Card>
 
       <View style={{ flexDirection: "row", gap: 8, marginBottom: spacing(1) }}>
-        <View style={{ flex: 1 }}>
-          <Button title="+ Gelir ekle" onPress={() => router.push("/add-cashflow?direction=income")} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Button title="+ Gider ekle" variant="ghost" onPress={() => router.push("/add-cashflow?direction=expense")} />
-        </View>
+        <DirButton dir="income" onPress={() => router.push("/add-cashflow?direction=income")} />
+        <DirButton dir="expense" onPress={() => router.push("/add-cashflow?direction=expense")} />
       </View>
 
       {hasData && <CashflowChartWrap projection={data.projection} />}
@@ -114,7 +111,35 @@ export default function Cashflow() {
   );
 }
 
+function DirButton({ dir, onPress }: { dir: "income" | "expense"; onPress: () => void }) {
+  const income = dir === "income";
+  return (
+    <Pressable style={styles.dirBtn} onPress={onPress}>
+      <Ionicons
+        name={income ? "caret-up" : "caret-down"}
+        size={12}
+        color={income ? colors.asset : colors.danger}
+      />
+      <Text style={{ color: colors.ink, fontWeight: "700", fontSize: 15 }}>
+        {income ? "Gelir ekle" : "Gider ekle"}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = {
+  dirBtn: {
+    flex: 1,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 6,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 14,
+    paddingVertical: 14,
+  },
   section: { fontSize: 16, fontWeight: "700" as const, color: colors.ink, marginBottom: spacing(1) },
   head: { flexDirection: "row" as const, borderBottomWidth: 1, borderBottomColor: colors.line, paddingBottom: 6 },
   row: { flexDirection: "row" as const, alignItems: "center" as const, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.line },

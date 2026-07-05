@@ -41,7 +41,7 @@ export function Donut({
             data.map((d, i) => {
               const frac = Math.max(0, d.value) / total;
               const seg = frac * C;
-              const gap = data.length > 1 ? Math.min(seg, C * 0.012) : 0; // segment arası boşluk
+              const gap = data.length > 1 ? Math.min(seg, C * (2 / 360)) : 0; // segment arası ~2° boşluk
               const dash = Math.max(0, seg - gap);
               const el = (
                 <Circle
@@ -64,12 +64,12 @@ export function Donut({
         {(centerLabel || centerValue != null) && (
           <>
             {centerValue != null && (
-              <SvgText x={cx} y={cy} fontSize={18} fontWeight="800" fill={colors.ink} textAnchor="middle">
+              <SvgText x={cx} y={cy + 2} fontSize={22} fontWeight="800" fill={colors.ink} textAnchor="middle">
                 {formatTRY(centerValue)}
               </SvgText>
             )}
             {centerLabel && (
-              <SvgText x={cx} y={cy + 18} fontSize={11} fill={colors.muted} textAnchor="middle">
+              <SvgText x={cx} y={cy + 20} fontSize={12} fill={colors.inkSoft} textAnchor="middle">
                 {centerLabel}
               </SvgText>
             )}
@@ -95,6 +95,46 @@ export function Legend({ data }: { data: Slice[] }) {
           </Text>
         </View>
       ))}
+    </View>
+  );
+}
+
+export interface WeekBar {
+  label: string;
+  paid: number;
+  pending: number;
+  overdue: number;
+}
+
+/** Bu ay — haftalık ödeme yığın çubukları (ödenen/bekleyen/geciken). */
+export function UpcomingBars({ weeks, maxHeight = 90 }: { weeks: WeekBar[]; maxHeight?: number }) {
+  const totals = weeks.map((w) => w.paid + w.pending + w.overdue);
+  const max = Math.max(1, ...totals);
+  return (
+    <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+      {weeks.map((w, i) => {
+        const total = totals[i];
+        const h = (v: number) => (total > 0 ? (v / max) * maxHeight : 0);
+        return (
+          <View key={i} style={{ flex: 1, alignItems: "center" }}>
+            <Text style={{ color: colors.inkSoft, fontSize: 12, marginBottom: 4, minHeight: 16 }}>
+              {total > 0 ? formatTRY(total) : ""}
+            </Text>
+            <View style={{ height: maxHeight, justifyContent: "flex-end", width: "70%" }}>
+              {total > 0 ? (
+                <View style={{ borderRadius: 4, overflow: "hidden" }}>
+                  {w.overdue > 0 && <View style={{ height: h(w.overdue), backgroundColor: colors.danger }} />}
+                  {w.pending > 0 && <View style={{ height: h(w.pending), backgroundColor: colors.primary }} />}
+                  {w.paid > 0 && <View style={{ height: h(w.paid), backgroundColor: colors.ok }} />}
+                </View>
+              ) : (
+                <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.line }} />
+              )}
+            </View>
+            <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>{w.label}</Text>
+          </View>
+        );
+      })}
     </View>
   );
 }

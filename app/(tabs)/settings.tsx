@@ -294,7 +294,7 @@ function NavRow({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable style={styles.line} onPress={onPress}>
       <Text style={{ color: colors.ink }}>{label}</Text>
-      <Text style={{ color: colors.primary, fontWeight: "700" }}>›</Text>
+      <Text style={{ color: colors.accent, fontWeight: "700" }}>›</Text>
     </Pressable>
   );
 }
@@ -305,7 +305,7 @@ function LegalRow({ label, onOpen, onWeb }: { label: string; onOpen: () => void;
         <Text style={{ color: colors.ink }}>{label}</Text>
       </Pressable>
       <Pressable onPress={onWeb} hitSlop={8}>
-        <Text style={{ color: colors.primary, fontWeight: "700" }}>tarayıcıda aç ↗</Text>
+        <Text style={{ color: colors.accent, fontWeight: "700" }}>tarayıcıda aç ↗</Text>
       </Pressable>
     </View>
   );
