@@ -313,7 +313,7 @@ function LegalRow({ label, onOpen, onWeb }: { label: string; onOpen: () => void;
 
 const styles = {
   h: { fontSize: 16, fontWeight: "700" as const, color: colors.ink, marginBottom: spacing(1) },
-  sub: { fontSize: 13, fontWeight: "700" as const, color: colors.muted, marginTop: spacing(1) },
+  sub: { fontSize: 13, fontWeight: "700" as const, color: colors.inkSoft, marginTop: spacing(1) },
   action: { color: colors.primary, fontWeight: "600" as const },
   line: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, paddingVertical: spacing(1) },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.line },

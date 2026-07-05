@@ -158,7 +158,7 @@ export default function Calendar() {
                 <Pressable onPress={() => setOpenMonth(openMonth === m.key ? null : m.key)} style={styles.row}>
                   <View>
                     <Text style={{ color: colors.ink, fontWeight: "700" }}>{TR_MONTHS[m.date.getMonth()]} {m.date.getFullYear()}</Text>
-                    <Text style={{ color: colors.muted, fontSize: 13 }}>{m.list.length} ödeme</Text>
+                    <Text style={{ color: colors.inkSoft, fontSize: 13 }}>{m.list.length} ödeme</Text>
                   </View>
                   <Text style={{ color: colors.ink, fontWeight: "700" }}>{formatTRY(m.total)}</Text>
                 </Pressable>
@@ -187,7 +187,7 @@ export default function Calendar() {
 function Summary({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <View style={{ width: "50%", paddingVertical: 4 }}>
-      <Text style={{ color: colors.muted, fontSize: 12 }}>{label}</Text>
+      <Text style={{ color: colors.inkSoft, fontSize: 12 }}>{label}</Text>
       <Text style={{ color, fontWeight: "700" }}>{value}</Text>
     </View>
   );

@@ -44,7 +44,7 @@ export function OccurrenceRow({
         <Text style={{ color: colors.ink, fontWeight: "600" }}>
           {occ.bank_name ?? occ.label ?? "Ödeme"}
         </Text>
-        <Text style={{ color: colors.muted, fontSize: 13 }}>
+        <Text style={{ color: colors.inkSoft, fontSize: 13 }}>
           {personName ? `${personName} · ` : ""}{daysLeft(occ.due_date)}
         </Text>
         <View style={[styles.badge, { backgroundColor: st.bg }]}>

@@ -48,17 +48,17 @@ export default function Assets() {
               <Pressable key={a.id} style={styles.row} onPress={() => router.push(`/add-asset?id=${a.id}`)}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: colors.ink, fontWeight: "600" }}>{a.label}</Text>
-                  <Text style={{ color: colors.muted, fontSize: 13 }}>
+                  <Text style={{ color: colors.inkSoft, fontSize: 13 }}>
                     {KIND_LABELS[a.kind] ?? a.kind}
                     {a.currency !== "TRY" ? ` · ${a.currency}` : ""}
                   </Text>
                   {dep && (
-                    <Text style={{ color: colors.muted, fontSize: 13 }}>
+                    <Text style={{ color: colors.inkSoft, fontSize: 13 }}>
                       Vade sonu ≈ {formatTRY(dep.maturityValue)} · {formatShortDate(dep.maturityDate)}
                     </Text>
                   )}
                   {priced && a.last_price == null && (
-                    <Text style={{ color: colors.muted, fontSize: 13 }}>fiyat bekleniyor</Text>
+                    <Text style={{ color: colors.inkSoft, fontSize: 13 }}>fiyat bekleniyor</Text>
                   )}
                 </View>
                 <View style={{ alignItems: "flex-end" }}>

@@ -55,7 +55,7 @@ export default function Debts() {
       <Card>
         <Text style={{ color: colors.inkSoft, fontSize: 14 }}>Toplam borç</Text>
         <Text style={{ color: colors.debt, fontSize: 30, fontWeight: "800" }}>{formatTRY(data.totalDebt)}</Text>
-        <Text style={{ color: colors.muted, fontSize: 13 }}>{activeDebts.length} aktif borç</Text>
+        <Text style={{ color: colors.inkSoft, fontSize: 13 }}>{activeDebts.length} aktif borç</Text>
       </Card>
 
       {data.personCards.some((c) => c.totalDebt > 0) && (
@@ -112,11 +112,11 @@ export default function Debts() {
                     <Text style={{ color: colors.ink, fontWeight: "600" }}>
                       {d.bank_name ?? d.bank}{d.label ? ` · ${d.label}` : ""}
                     </Text>
-                    <Text style={{ color: colors.muted, fontSize: 13 }}>
+                    <Text style={{ color: colors.inkSoft, fontSize: 13 }}>
                       {personName(d)} · {KIND_LABELS[d.kind]}
                     </Text>
                     {min > 0 && (
-                      <Text style={{ color: colors.muted, fontSize: 13 }}>Bu ay min.: {formatTRY(min)}</Text>
+                      <Text style={{ color: colors.inkSoft, fontSize: 13 }}>Bu ay min.: {formatTRY(min)}</Text>
                     )}
                   </View>
                   <Text style={{ color: colors.ink, fontWeight: "700" }}>{formatTRY(out(d))}</Text>

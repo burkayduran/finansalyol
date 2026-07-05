@@ -34,11 +34,11 @@ export default function People() {
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ fontSize: 17, fontWeight: "800", color: colors.ink }}>{c.name}</Text>
-                <Text style={{ color: colors.muted, fontSize: 12 }}>
+                <Text style={{ color: colors.inkSoft, fontSize: 12 }}>
                   {c.upcomingCount > 0 ? `${c.upcomingCount} yaklaşan` : "yaklaşan yok"}
                 </Text>
               </View>
-              <Text style={{ color: colors.muted, fontSize: 12, marginTop: spacing(0.5) }}>Net durum</Text>
+              <Text style={{ color: colors.inkSoft, fontSize: 12, marginTop: spacing(0.5) }}>Net durum</Text>
               <Text style={{ color: net < 0 ? colors.danger : colors.asset, fontSize: 20, fontWeight: "800" }}>
                 {formatTRY(net)}
               </Text>
@@ -61,7 +61,7 @@ export default function People() {
 function Cell({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <View>
-      <Text style={{ color: colors.muted, fontSize: 12 }}>{label}</Text>
+      <Text style={{ color: colors.inkSoft, fontSize: 12 }}>{label}</Text>
       <Text style={{ color, fontWeight: "700" }}>{value}</Text>
     </View>
   );

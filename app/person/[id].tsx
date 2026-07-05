@@ -129,7 +129,7 @@ export default function PersonDetail() {
           <Text style={styles.h}>Ödeme geçmişi</Text>
           {payments.map((p) => (
             <View key={p.id} style={styles.line}>
-              <Text style={{ color: colors.muted, fontSize: 13 }}>{p.paid_at}</Text>
+              <Text style={{ color: colors.inkSoft, fontSize: 13 }}>{p.paid_at}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <Text style={{ color: p.is_reversed ? colors.muted : colors.ink, fontWeight: "600", textDecorationLine: p.is_reversed ? "line-through" : "none" }}>
                   {formatTRY(Number(p.amount))}
