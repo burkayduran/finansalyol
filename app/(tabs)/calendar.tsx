@@ -5,7 +5,6 @@ import { useHousehold } from "@/hooks/useHousehold";
 import { Card } from "@/components/ui";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { PaymentModal } from "@/components/PaymentModal";
-import { skipOccurrence } from "@/lib/occurrences";
 import { track } from "@/lib/analytics";
 import { formatTRY } from "@/core/format";
 import { parseISODateLocal } from "@/core/dates";
@@ -143,7 +142,7 @@ export default function Calendar() {
                   {parseISODateLocal(day).getDate()} {TR_MONTHS[parseISODateLocal(day).getMonth()]}
                 </Text>
                 {list.map((o) => (
-                  <OccurrenceRow key={o.id} occ={o} personName={nameFor(o)} onPay={() => openPay(o)} onSkip={() => skipOccurrence(o.id).then(() => data.reload())} />
+                  <OccurrenceRow key={o.id} occ={o} personName={nameFor(o)} onPay={() => openPay(o)} />
                 ))}
               </Card>
             ))

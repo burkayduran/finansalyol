@@ -3,9 +3,11 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
+import { CashflowChartWrap } from "@/components/analytics";
 import { mandatoryMinimum } from "@/core/minimum";
 import { projectCashflow, type CashflowDebt, type CashflowEntry } from "@/core/cashflow";
 import { formatTRY } from "@/core/format";
+import { parseISODateLocal } from "@/core/dates";
 import { colors, spacing } from "@/theme";
 
 const TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
@@ -21,7 +23,7 @@ export default function Cashflow() {
       amount: Number(c.amount) * data.fxRateFor(c.currency),
       direction: c.direction,
       recurrence: c.recurrence,
-      occurredOn: c.occurred_on ? new Date(c.occurred_on) : undefined,
+      occurredOn: c.occurred_on ? parseISODateLocal(c.occurred_on) : undefined,
     }));
     const debts: CashflowDebt[] = data.debts.map((d) => ({
       kind: d.kind,
@@ -29,12 +31,12 @@ export default function Cashflow() {
         kind: d.kind,
         balance: data.debtOutstanding(d),
         cardLimit: d.card_limit,
-        installment: d.installment,
-        userMinimum: d.user_minimum,
+        installment: d.monthly_installment ?? d.installment,
+        userMinimum: d.user_minimum_payment ?? d.user_minimum,
       }),
-      installment: d.installment ?? undefined,
-      termCount: d.term_count ?? undefined,
-      firstInstallmentDate: d.first_installment_date ? new Date(d.first_installment_date) : undefined,
+      installment: (d.monthly_installment ?? d.installment) ?? undefined,
+      termCount: (d.remaining_installment_count ?? d.term_count) ?? undefined,
+      firstInstallmentDate: d.next_due_date ? parseISODateLocal(d.next_due_date) : d.first_installment_date ? parseISODateLocal(d.first_installment_date) : undefined,
     }));
     return projectCashflow(entries, debts, 12);
   }, [data.cashFlows, data.debts, data.fxRateFor, data.debtOutstanding]);
@@ -65,8 +67,11 @@ export default function Cashflow() {
         </View>
       </View>
 
+      {hasData && <CashflowChartWrap projection={data.projection} />}
+
       {hasData && (
         <Card>
+          <Text style={styles.section}>Aylık detay</Text>
           <View style={styles.head}>
             <Text style={[styles.hcell, { flex: 1 }]}>Ay</Text>
             <Text style={[styles.hcell, styles.num]}>Gelir</Text>

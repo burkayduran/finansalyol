@@ -1,6 +1,7 @@
 // Supabase mutation hatalarını tek tip ele al: dev'de gerçek hata console'a +
 // mesaja yansır; production'da kullanıcı sade Türkçe görür.
 import { Alert } from "react-native";
+import { captureException } from "./monitoring";
 
 const isDev = typeof __DEV__ !== "undefined" && __DEV__;
 
@@ -9,6 +10,7 @@ export function handleSaveError(scope: string, error: unknown, friendly = "Kayde
   if (!error) return false;
   // eslint-disable-next-line no-console
   console.error(`[${scope}] save error`, error);
+  captureException(error, { scope });
   const detail = (error as { message?: string })?.message;
   Alert.alert("Kaydedilemedi", isDev && detail ? `${friendly}\n\n[dev] ${detail}` : friendly);
   return true;

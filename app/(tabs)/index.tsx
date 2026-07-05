@@ -7,11 +7,10 @@ import { PaymentModal } from "@/components/PaymentModal";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { Donut, CashflowChartWrap } from "@/components/analytics";
 import { formatTRY } from "@/core/format";
-import { colors, spacing, typography } from "@/theme";
+import { colors, spacing, typography, SLICE_COLORS } from "@/theme";
 import type { Debt, PaymentOccurrence } from "@/lib/database.types";
 
 const TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
-const SLICE_COLORS = ["#233056", "#C2772E", "#3E5A8C", "#1E7F5C", "#9AA1B0", "#6C5CE7", "#B9770E"];
 
 export default function Dashboard() {
   const router = useRouter();
@@ -47,9 +46,10 @@ export default function Dashboard() {
       {/* 1 — Net Durum Hero */}
       <Card>
         <Text style={styles.label}>Net durum</Text>
-        <Text style={[typography.heroAmount, { color: data.net < 0 ? colors.danger : colors.asset, marginVertical: 2 }]}>
-          {formatTRY(data.net)}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginVertical: 2 }}>
+          <Text style={[typography.heroAmount, { color: colors.ink }]}>{formatTRY(data.net)}</Text>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: data.net < 0 ? colors.danger : colors.asset }} />
+        </View>
         <View style={styles.statRow}>
           <Pressable style={{ flex: 1 }} onPress={() => router.push("/debts")}>
             <Text style={styles.label}>Toplam borç ›</Text>
@@ -166,10 +166,10 @@ export default function Dashboard() {
 }
 
 const styles = {
-  label: { ...typography.label, color: colors.muted },
+  label: { ...typography.label, color: colors.inkSoft },
   statRow: { flexDirection: "row" as const, marginTop: spacing(1.5) },
   cta: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center" as const },
   progressTrack: { height: 8, borderRadius: 4, backgroundColor: colors.line, marginTop: spacing(0.75), overflow: "hidden" as const },
-  progressFill: { height: 8, borderRadius: 4, backgroundColor: colors.primary },
+  progressFill: { height: 8, borderRadius: 4, backgroundColor: colors.accent },
   personRow: { paddingVertical: spacing(1), borderTopWidth: 1, borderTopColor: colors.line },
 };

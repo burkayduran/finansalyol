@@ -10,6 +10,7 @@ import { toISODateLocal } from "@/core/dates";
 import { track } from "@/lib/analytics";
 import { BRAND } from "@/config/brand";
 import { useEntitlement, FREE_LIMITS } from "@/config/entitlements";
+import { FEATURES } from "@/config/features";
 import { Button, Card, Field } from "@/components/ui";
 import { colors, spacing } from "@/theme";
 import type { NotificationPrefs } from "@/lib/database.types";
@@ -34,6 +35,7 @@ export default function Settings() {
   const [counts, setCounts] = useState({ members: 0, persons: 0, invites: 0 });
   const [profile, setProfile] = useState<{ full_name: string; email: string }>({ full_name: "", email: "" });
   const [householdName, setHouseholdName] = useState("");
+  const [deletionAt, setDeletionAt] = useState<string | null>(null);
   const [editing, setEditing] = useState<null | "profile" | "household">(null);
   const [draftName, setDraftName] = useState("");
 
@@ -45,6 +47,9 @@ export default function Settings() {
     supabase.from("profiles").select("full_name, email").eq("id", uid).maybeSingle()
       .then(({ data }) => setProfile({ full_name: data?.full_name ?? "", email: data?.email ?? session?.user.email ?? "" }));
     Notifications.getPermissionsAsync().then((p) => setPushStatus(p.granted ? "İzin verildi" : p.status === "denied" ? "Kapalı" : "İzin bekliyor"));
+    supabase.from("account_deletion_requests").select("created_at").eq("user_id", uid).eq("status", "pending")
+      .order("created_at", { ascending: false }).limit(1).maybeSingle()
+      .then(({ data }) => setDeletionAt(data?.created_at ?? null));
   }, [session?.user.id]);
 
   useEffect(() => {
@@ -104,16 +109,18 @@ export default function Settings() {
   };
 
   const requestDeletion = () =>
-    Alert.alert("Hesabımı sil", "Bu işlem geri alınamaz. Talebiniz alınır ve hesabınız silinmek üzere işaretlenir. Devam edilsin mi?", [
+    Alert.alert("Hesabımı sil", "Bu işlem geri alınamaz. Talebin alınır ve hesabın ile hane verilerin 30 gün içinde işleme alınıp silinir. Devam edilsin mi?", [
       { text: "Vazgeç", style: "cancel" },
       {
         text: "Talep oluştur",
         style: "destructive",
         onPress: async () => {
-          const { error } = await supabase.from("account_deletion_requests").insert({ user_id: session!.user.id, household_id: householdId });
+          const { data, error } = await supabase.from("account_deletion_requests")
+            .insert({ user_id: session!.user.id, household_id: householdId }).select("created_at").single();
           if (error) return Alert.alert("Olmadı", "Talep oluşturulamadı. Lütfen tekrar dene.");
+          setDeletionAt(data?.created_at ?? new Date().toISOString());
           track("delete_request_created");
-          Alert.alert("Talebiniz alındı", "Hesap silme talebiniz kaydedildi. İşlem tamamlanınca bilgilendirileceksiniz.");
+          Alert.alert("Talebin alındı", "Hesap silme talebin kaydedildi. 30 gün içinde işleme alınacak.");
         },
       },
     ]);
@@ -181,11 +188,20 @@ export default function Settings() {
       <Card>
         <Text style={styles.h}>Bildirimler</Text>
         <Row label="Push bildirimi" value={prefs.push_enabled} onChange={(v) => update({ push_enabled: v })} />
-        <Row label="E-posta" value={prefs.email_enabled} onChange={(v) => update({ email_enabled: v })} />
-        <Row label="Haftalık özet" value={prefs.weekly_digest} onChange={(v) => {
-          if (v && entitlement === "free" && !FREE_LIMITS.emailDigest) return router.push("/paywall");
-          update({ weekly_digest: v });
-        }} />
+        {FEATURES.emailReminders ? (
+          <>
+            <Row label="E-posta" value={prefs.email_enabled} onChange={(v) => update({ email_enabled: v })} />
+            <Row label="Haftalık özet" value={prefs.weekly_digest} onChange={(v) => {
+              if (v && entitlement === "free" && !FREE_LIMITS.emailDigest) return router.push("/paywall");
+              update({ weekly_digest: v });
+            }} />
+          </>
+        ) : (
+          <View style={styles.line}>
+            <Text style={{ color: colors.inkSoft }}>E-posta bildirimi</Text>
+            <Text style={{ color: colors.muted, fontStyle: "italic" }}>Yakında</Text>
+          </View>
+        )}
         <Text style={styles.sub}>Hatırlatma zamanları</Text>
         <Row label="7 gün önce" value={prefs.remind_7d} onChange={(v) => update({ remind_7d: v })} />
         <Row label="3 gün önce" value={prefs.remind_3d} onChange={(v) => update({ remind_3d: v })} />
@@ -217,7 +233,13 @@ export default function Settings() {
           Tüm borç, varlık, ödeme ve aile kayıtlarını dosya olarak indir.
         </Text>
         <Button title="Verilerimi indir" variant="ghost" onPress={exportData} />
-        <Button title="Hesabımı sil" variant="link" danger onPress={requestDeletion} />
+        {deletionAt ? (
+          <Text style={{ color: colors.danger, marginVertical: spacing(1) }}>
+            Silme talebin alındı — {deletionAt.slice(0, 10)} (30 gün içinde işlenir)
+          </Text>
+        ) : (
+          <Button title="Hesabımı sil" variant="link" danger onPress={requestDeletion} />
+        )}
       </Card>
 
       <Card>

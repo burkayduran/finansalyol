@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { Button, Card, Field } from "@/components/ui";
 import { PaymentModal } from "@/components/PaymentModal";
+import { skipOccurrence } from "@/lib/occurrences";
 import { track } from "@/lib/analytics";
 import { formatTRY, formatPercent, parseTRYInput } from "@/core/format";
 import { daysUntilDue, formatShortDate, nextDueDate } from "@/core/dates";
@@ -11,7 +12,7 @@ import { mandatoryMinimum } from "@/core/minimum";
 import { outstandingBalance } from "@/core/installment";
 import { minimumTrap, avoidedInterestFromExtra, type TrapVerdict } from "@/core/interest";
 import { colors, spacing } from "@/theme";
-import type { Debt } from "@/lib/database.types";
+import type { Debt, PaymentOccurrence } from "@/lib/database.types";
 
 const TRAP_TEXT: Record<TrapVerdict, string> = {
   shrinks: "Sadece asgarisini ödersen borç azalır ama kalan tutara faiz işler. Biraz fazlası daha hızlı bitirir.",
@@ -24,6 +25,7 @@ export default function DebtDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [debt, setDebt] = useState<Debt | null>(null);
+  const [nextOcc, setNextOcc] = useState<PaymentOccurrence | null>(null);
   const [tab, setTab] = useState<"ozet" | "icgoru">("ozet");
   const [payOpen, setPayOpen] = useState(false);
   const [extraWhatIf, setExtraWhatIf] = useState("");
@@ -31,6 +33,18 @@ export default function DebtDetail() {
   const load = async () => {
     const { data } = await supabase.from("debts").select("*").eq("id", id).maybeSingle();
     setDebt(data);
+    const { data: occ } = await supabase
+      .from("payment_occurrences").select("*").eq("debt_id", id)
+      .in("status", ["pending", "partial", "overdue"])
+      .order("due_date").limit(1).maybeSingle();
+    setNextOcc(occ ?? null);
+  };
+  const skipThisMonth = () => {
+    if (!nextOcc) return;
+    Alert.alert("Bu ay atla", "Bu dönemin ödemesi atlansın mı? Bu ödeme için hatırlatma gitmez.", [
+      { text: "Vazgeç", style: "cancel" },
+      { text: "Atla", style: "destructive", onPress: async () => { await skipOccurrence(nextOcc.id); load(); } },
+    ]);
   };
   useEffect(() => {
     load();
@@ -118,6 +132,11 @@ export default function DebtDetail() {
             Kalan: {formatTRY(balance)}
           </Text>
           <Button title="Ödeme gir" onPress={() => setPayOpen(true)} />
+          {nextOcc && (
+            <Pressable onPress={skipThisMonth} style={{ alignSelf: "center", paddingVertical: spacing(1) }}>
+              <Text style={{ color: colors.muted }}>Bu ay atla</Text>
+            </Pressable>
+          )}
         </Card>
       ) : (
         <>
@@ -182,6 +201,6 @@ const styles = {
     backgroundColor: colors.bg,
     alignItems: "center" as const,
   },
-  tabActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
+  tabActive: { backgroundColor: "#F6EEE3", borderColor: colors.accent },
   tabText: { fontWeight: "700" as const, color: colors.inkSoft },
 };

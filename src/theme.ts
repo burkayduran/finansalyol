@@ -19,6 +19,17 @@ export const colors = {
   asset: "#1E7F5C",
 };
 
+// Rozet renkleri tek yerde (ileride koyu mod tek dosyadan).
+export const badge = {
+  neutralBg: "#E6E8EC", neutralInk: "#586079",
+  warnBg: "#FDE68A", warnInk: "#92400E",
+  okBg: "#DCFCE7", okInk: "#166534",
+  dangerBg: "#FEE2E2", dangerInk: "#991B1B",
+};
+
+// Pano donut paleti — aile kimliğine hizalı (mor çıktı; gri son sırada "Ortak/Diğer").
+export const SLICE_COLORS = ["#233056", "#C2772E", "#3E5A8C", "#1E7F5C", "#8C2F39", "#586079"];
+
 export const radius = 16;
 export const spacing = (n: number) => n * 8;
 

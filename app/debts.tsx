@@ -119,7 +119,7 @@ export default function Debts() {
                       <Text style={{ color: colors.muted, fontSize: 13 }}>Bu ay min.: {formatTRY(min)}</Text>
                     )}
                   </View>
-                  <Text style={{ color: colors.debt, fontWeight: "700" }}>{formatTRY(out(d))}</Text>
+                  <Text style={{ color: colors.ink, fontWeight: "700" }}>{formatTRY(out(d))}</Text>
                 </Pressable>
               </Link>
             );
@@ -134,7 +134,7 @@ function Line({ label, value }: { label: string; value: number }) {
   return (
     <View style={styles.line}>
       <Text style={{ color: colors.ink }}>{label}</Text>
-      <Text style={{ color: colors.debt, fontWeight: "700" }}>{formatTRY(value)}</Text>
+      <Text style={{ color: colors.ink, fontWeight: "700" }}>{formatTRY(value)}</Text>
     </View>
   );
 }

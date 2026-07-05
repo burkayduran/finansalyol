@@ -2,6 +2,7 @@ import { Component, type ReactNode } from "react";
 import { Text, View } from "react-native";
 import { colors, spacing } from "@/theme";
 import { Button } from "@/components/ui";
+import { captureException } from "@/lib/monitoring";
 
 interface State { hasError: boolean }
 
@@ -15,7 +16,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   componentDidCatch(error: unknown) {
     // eslint-disable-next-line no-console
     console.error("[error-boundary]", error);
-    // Production: Sentry.captureException(error)
+    captureException(error, { source: "error-boundary" });
   }
 
   render() {

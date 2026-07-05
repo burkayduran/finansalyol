@@ -1,15 +1,15 @@
 import { Pressable, Text, View } from "react-native";
 import { formatTRY } from "@/core/format";
 import { parseISODateLocal } from "@/core/dates";
-import { colors, spacing } from "@/theme";
+import { badge, colors, spacing } from "@/theme";
 import type { PaymentOccurrence, PaymentOccurrenceStatus } from "@/lib/database.types";
 
 const STATUS: Record<PaymentOccurrenceStatus, { label: string; color: string; bg: string }> = {
-  pending: { label: "Bekliyor", color: colors.inkSoft, bg: colors.line },
-  partial: { label: "Kısmi", color: "#92400e", bg: "#fde68a" },
-  paid: { label: "Ödendi", color: "#166534", bg: "#dcfce7" },
-  overdue: { label: "Gecikti", color: "#991b1b", bg: "#fee2e2" },
-  skipped: { label: "Atlandı", color: colors.muted, bg: colors.line },
+  pending: { label: "Bekliyor", color: badge.neutralInk, bg: badge.neutralBg },
+  partial: { label: "Kısmi", color: badge.warnInk, bg: badge.warnBg },
+  paid: { label: "Ödendi", color: badge.okInk, bg: badge.okBg },
+  overdue: { label: "Gecikti", color: badge.dangerInk, bg: badge.dangerBg },
+  skipped: { label: "Atlandı", color: colors.muted, bg: badge.neutralBg },
 };
 
 function daysLeft(dueISO: string): string {

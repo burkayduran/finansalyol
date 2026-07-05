@@ -5,6 +5,7 @@ import { Card } from "@/components/ui";
 import { Donut as Ring, type Slice } from "@/components/charts";
 import { CashflowChart, type CashflowMonth } from "@/components/CashflowChart";
 import { formatTRY } from "@/core/format";
+import { toISODateLocal } from "@/core/dates";
 import { colors, spacing, typography } from "@/theme";
 import type { PersonCard } from "@/hooks/useHousehold";
 import type { MonthlyFlow } from "@/core/cashflow";
@@ -60,9 +61,9 @@ export function Donut({ personCards, colors: palette }: { personCards: PersonCar
   );
 }
 
-export function CashflowChartWrap({ projection, onDetail }: { projection: MonthlyFlow[]; onDetail: () => void }) {
+export function CashflowChartWrap({ projection, onDetail }: { projection: MonthlyFlow[]; onDetail?: () => void }) {
   const months: CashflowMonth[] = projection.slice(0, 6).map((m) => ({
-    monthKey: m.month.toISOString(),
+    monthKey: toISODateLocal(m.month),
     label: TR_MONTHS[m.month.getMonth()],
     income: m.income,
     outflow: m.expense + m.debtDue,
@@ -75,9 +76,11 @@ export function CashflowChartWrap({ projection, onDetail }: { projection: Monthl
     <Card>
       <Text style={typography.cardTitle}>Nakit akışı · planlanan</Text>
       <CashflowChart data={months} selectedMonthKey={sel} onSelectMonth={setSel} />
-      <Pressable onPress={onDetail}>
-        <Text style={{ color: colors.primary, fontWeight: "700", textAlign: "center", marginTop: 8 }}>Detayı gör →</Text>
-      </Pressable>
+      {onDetail && (
+        <Pressable onPress={onDetail}>
+          <Text style={{ color: colors.primary, fontWeight: "700", textAlign: "center", marginTop: 8 }}>Detayı gör →</Text>
+        </Pressable>
+      )}
     </Card>
   );
 }

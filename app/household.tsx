@@ -5,7 +5,6 @@ import { useHousehold } from "@/hooks/useHousehold";
 import { Card } from "@/components/ui";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { PaymentModal } from "@/components/PaymentModal";
-import { skipOccurrence } from "@/lib/occurrences";
 import { formatTRY } from "@/core/format";
 import { colors, spacing } from "@/theme";
 import type { Debt, PaymentOccurrence } from "@/lib/database.types";
@@ -51,7 +50,7 @@ export default function HouseholdDetail() {
           <Text style={{ color: colors.muted }}>Yaklaşan ödeme yok.</Text>
         ) : (
           occ.sort((a, b) => a.due_date.localeCompare(b.due_date)).map((o) => (
-            <OccurrenceRow key={o.id} occ={o} onPay={() => openPay(o)} onSkip={() => skipOccurrence(o.id).then(() => data.reload())} />
+            <OccurrenceRow key={o.id} occ={o} onPay={() => openPay(o)} />
           ))
         )}
       </Card>
