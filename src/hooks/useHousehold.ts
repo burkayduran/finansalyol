@@ -12,6 +12,7 @@ import type {
 } from "@/lib/database.types";
 import { mandatoryMinimum } from "@/core/minimum";
 import { outstandingBalance } from "@/core/installment";
+import { effectiveStatus } from "@/core/paymentOccurrences";
 import { parseISODateLocal } from "@/core/dates";
 import { assetValueTRY, assetPnlTRY } from "@/core/assets";
 import {
@@ -199,7 +200,7 @@ export function useHousehold(): HouseholdData {
   // Sıralama: gecikenler > bugün > en yakın due > kısmi > diğer bekleyenler.
   const rank = (o: PaymentOccurrence): number => {
     const days = Math.round((parseISODateLocal(o.due_date).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000);
-    if (o.status === "overdue" || days < 0) return 0;
+    if (effectiveStatus(o, now) === "overdue") return 0;
     if (days === 0) return 1;
     if (o.status === "partial") return 3;
     return 2;

@@ -6,6 +6,7 @@ import { Card, NavRow } from "@/components/ui";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { PaymentModal } from "@/components/PaymentModal";
 import { UpcomingBars, type WeekBar } from "@/components/charts";
+import { effectiveStatus } from "@/core/paymentOccurrences";
 import { track } from "@/lib/analytics";
 import { formatTRY } from "@/core/format";
 import { parseISODateLocal, toISODateLocal } from "@/core/dates";
@@ -45,6 +46,7 @@ export default function Calendar() {
 
   const now = new Date();
   const todayISO = toISODateLocal(now);
+  const eff = (o: PaymentOccurrence) => effectiveStatus(o, now);
   const ms = new Date(now.getFullYear(), now.getMonth(), 1);
   const me = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
@@ -57,10 +59,10 @@ export default function Calendar() {
   const monthTotal = monthAll.filter((o) => o.status !== "skipped").reduce((s, o) => s + Number(o.amount_due), 0);
   const monthPaid = monthAll.reduce((s, o) => s + Number(o.amount_paid), 0);
   const monthPending = monthAll
-    .filter((o) => o.status === "pending" || o.status === "partial")
+    .filter((o) => eff(o) === "pending" || eff(o) === "partial")
     .reduce((s, o) => s + Math.max(0, Number(o.amount_due) - Number(o.amount_paid)), 0);
   const monthOverdue = monthAll
-    .filter((o) => o.status === "overdue")
+    .filter((o) => eff(o) === "overdue")
     .reduce((s, o) => s + Math.max(0, Number(o.amount_due) - Number(o.amount_paid)), 0);
 
   // Bu ay — haftalık yığın (1-7, 8-14, 15-21, 22-31)
@@ -72,23 +74,25 @@ export default function Calendar() {
       { label: "22–31", paid: 0, pending: 0, overdue: 0 },
     ];
     monthAll.forEach((o) => {
-      if (o.status === "skipped") return;
+      const s = eff(o);
+      if (s === "skipped") return;
       const day = parseISODateLocal(o.due_date).getDate();
       const b = day <= 7 ? 0 : day <= 14 ? 1 : day <= 21 ? 2 : 3;
       const paidAmt = Number(o.amount_paid);
       const remaining = Math.max(0, Number(o.amount_due) - paidAmt);
       if (paidAmt > 0) buckets[b].paid += paidAmt;
-      if (o.status === "overdue") buckets[b].overdue += remaining;
-      else if (o.status === "pending" || o.status === "partial") buckets[b].pending += remaining;
+      if (s === "overdue") buckets[b].overdue += remaining;
+      else if (s === "pending" || s === "partial") buckets[b].pending += remaining;
     });
     return buckets;
   }, [data.occurrences]);
 
   const matchFilter = (o: PaymentOccurrence) => {
     if (filter === "all") return true;
-    if (filter === "pending") return o.status === "pending" || o.status === "partial";
-    if (filter === "paid") return o.status === "paid";
-    if (filter === "overdue") return o.status === "overdue";
+    const s = eff(o);
+    if (filter === "pending") return s === "pending" || s === "partial";
+    if (filter === "paid") return s === "paid";
+    if (filter === "overdue") return s === "overdue";
     return true;
   };
 

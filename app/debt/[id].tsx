@@ -41,10 +41,14 @@ export default function DebtDetail() {
   };
   const skipThisMonth = () => {
     if (!nextOcc) return;
-    Alert.alert("Bu ay atla", "Bu dönemin ödemesi atlansın mı? Bu ödeme için hatırlatma gitmez.", [
-      { text: "Vazgeç", style: "cancel" },
-      { text: "Atla", style: "destructive", onPress: async () => { await skipOccurrence(nextOcc.id); load(); } },
-    ]);
+    Alert.alert(
+      "Bu ayın ödemesi atlansın mı?",
+      "Bu ay için hatırlatma gönderilmez. Gelecek ay normal devam eder.",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        { text: "Atla", style: "destructive", onPress: async () => { await skipOccurrence(nextOcc.id); load(); } },
+      ]
+    );
   };
   useEffect(() => {
     load();

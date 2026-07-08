@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  effectiveStatus,
   generateNextOccurrencesForDebt,
   getMandatoryAmountForDebt,
   recalculateOccurrenceStatus,
@@ -116,5 +117,30 @@ describe("recalculateOccurrenceStatus", () => {
   });
   it("skipped stays skipped", () => {
     expect(recalculateOccurrenceStatus({ due_date: "2026-06-10", amount_due: 1000, amount_paid: 0, status: "skipped" }, today)).toBe("skipped");
+  });
+});
+
+describe("effectiveStatus", () => {
+  const today = new Date(2026, 5, 15); // 15 Haz 2026
+  it("pending + dün vadeli → overdue", () => {
+    expect(effectiveStatus({ status: "pending", due_date: "2026-06-14" }, today)).toBe("overdue");
+  });
+  it("partial + dün vadeli → overdue", () => {
+    expect(effectiveStatus({ status: "partial", due_date: "2026-06-14" }, today)).toBe("overdue");
+  });
+  it("pending + bugün vadeli → pending (vade günü gecikme değil)", () => {
+    expect(effectiveStatus({ status: "pending", due_date: "2026-06-15" }, today)).toBe("pending");
+  });
+  it("partial + gelecek vadeli → partial", () => {
+    expect(effectiveStatus({ status: "partial", due_date: "2026-06-20" }, today)).toBe("partial");
+  });
+  it("paid + geçmiş → paid", () => {
+    expect(effectiveStatus({ status: "paid", due_date: "2026-06-01" }, today)).toBe("paid");
+  });
+  it("overdue → overdue", () => {
+    expect(effectiveStatus({ status: "overdue", due_date: "2026-06-01" }, today)).toBe("overdue");
+  });
+  it("skipped → skipped (geçmiş olsa da)", () => {
+    expect(effectiveStatus({ status: "skipped", due_date: "2026-06-01" }, today)).toBe("skipped");
   });
 });

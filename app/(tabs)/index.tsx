@@ -48,15 +48,18 @@ export default function Dashboard() {
       {/* 1 — Net Durum Hero + oran çubuğu */}
       <Card>
         <Text style={styles.label}>Net durum</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginVertical: 2 }}>
-          <Text style={[typography.heroAmount, { color: colors.ink }]}>{formatTRY(data.net)}</Text>
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: data.net < 0 ? colors.danger : colors.asset }} />
-        </View>
+        <Text style={[typography.heroAmount, { color: colors.ink, marginVertical: 2 }]}>{formatTRY(data.net)}</Text>
         {ratioTotal > 0 && (
-          <View style={styles.ratioBar}>
-            <View style={{ flex: Math.max(0.001, data.totalAsset), backgroundColor: colors.asset }} />
-            <View style={{ flex: Math.max(0.001, data.totalDebt), backgroundColor: colors.debt }} />
-          </View>
+          <>
+            <View style={styles.ratioLabelRow}>
+              <Text style={styles.ratioLabel}>Varlık</Text>
+              <Text style={styles.ratioLabel}>Borç</Text>
+            </View>
+            <View style={styles.ratioBar}>
+              <View style={{ flex: Math.max(0.001, data.totalAsset), backgroundColor: colors.asset }} />
+              <View style={{ flex: Math.max(0.001, data.totalDebt), backgroundColor: colors.debt }} />
+            </View>
+          </>
         )}
         <View style={styles.statRow}>
           <Pressable style={{ flex: 1 }} onPress={() => router.push("/debts")}>
@@ -120,15 +123,15 @@ export default function Dashboard() {
           {data.next3Months.some((m) => m.total > 0) && (
             <>
               <Text style={[styles.label, { marginTop: spacing(2) }]}>Gelecek aylar</Text>
-              <View style={styles.chipRow}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
                 {data.next3Months.map((m, i) => (
                   <View key={m.month.toISOString()} style={[styles.monthChip, i === 0 && styles.monthChipCurrent]}>
-                    <Text style={{ color: colors.ink, fontSize: 13 }}>
+                    <Text style={{ color: colors.ink, fontSize: 12 }}>
                       {TR_MONTHS[m.month.getMonth()]} {formatTRY(m.total)}
                     </Text>
                   </View>
                 ))}
-              </View>
+              </ScrollView>
             </>
           )}
 
@@ -164,8 +167,10 @@ const styles = {
   cta: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: "center" as const },
   progressTrack: { height: 8, borderRadius: 4, backgroundColor: colors.line, marginTop: spacing(0.75), overflow: "hidden" as const },
   progressFill: { height: 8, borderRadius: 4, backgroundColor: colors.accent },
-  ratioBar: { flexDirection: "row" as const, height: 6, borderRadius: 3, overflow: "hidden" as const, backgroundColor: colors.line, marginTop: spacing(1) },
-  chipRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 6, marginTop: 4 },
+  ratioLabelRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, marginTop: spacing(1) },
+  ratioLabel: { fontSize: 11, color: colors.inkSoft },
+  ratioBar: { flexDirection: "row" as const, height: 6, borderRadius: 3, overflow: "hidden" as const, backgroundColor: colors.line, marginTop: 4 },
+  chipRow: { flexDirection: "row" as const, gap: 6, marginTop: 4, paddingRight: spacing(1) },
   monthChip: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: colors.primarySoft },
   monthChipCurrent: { borderColor: colors.accent },
   tertiaryLink: { color: colors.accent, fontWeight: "700" as const },

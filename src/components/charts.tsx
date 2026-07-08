@@ -63,14 +63,14 @@ export function Donut({
         </G>
         {(centerLabel || centerValue != null) && (
           <>
-            {centerValue != null && (
-              <SvgText x={cx} y={cy + 2} fontSize={22} fontWeight="800" fill={colors.ink} textAnchor="middle">
-                {formatTRY(centerValue)}
+            {centerLabel && (
+              <SvgText x={cx} y={cy - 6} fontSize={11} fill={colors.inkSoft} textAnchor="middle">
+                {centerLabel}
               </SvgText>
             )}
-            {centerLabel && (
-              <SvgText x={cx} y={cy + 20} fontSize={12} fill={colors.inkSoft} textAnchor="middle">
-                {centerLabel}
+            {centerValue != null && (
+              <SvgText x={cx} y={cy + 15} fontSize={22} fontWeight="800" fill={colors.ink} textAnchor="middle">
+                {formatTRY(centerValue)}
               </SvgText>
             )}
           </>
@@ -111,30 +111,46 @@ export function UpcomingBars({ weeks, maxHeight = 90 }: { weeks: WeekBar[]; maxH
   const totals = weeks.map((w) => w.paid + w.pending + w.overdue);
   const max = Math.max(1, ...totals);
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
-      {weeks.map((w, i) => {
-        const total = totals[i];
-        const h = (v: number) => (total > 0 ? (v / max) * maxHeight : 0);
-        return (
-          <View key={i} style={{ flex: 1, alignItems: "center" }}>
-            <Text style={{ color: colors.inkSoft, fontSize: 12, marginBottom: 4, minHeight: 16 }}>
-              {total > 0 ? formatTRY(total) : ""}
-            </Text>
-            <View style={{ height: maxHeight, justifyContent: "flex-end", width: "70%" }}>
-              {total > 0 ? (
-                <View style={{ borderRadius: 4, overflow: "hidden" }}>
-                  {w.overdue > 0 && <View style={{ height: h(w.overdue), backgroundColor: colors.danger }} />}
-                  {w.pending > 0 && <View style={{ height: h(w.pending), backgroundColor: colors.primary }} />}
-                  {w.paid > 0 && <View style={{ height: h(w.paid), backgroundColor: colors.ok }} />}
-                </View>
-              ) : (
-                <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.line }} />
-              )}
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+        {weeks.map((w, i) => {
+          const total = totals[i];
+          const h = (v: number) => (total > 0 ? (v / max) * maxHeight : 0);
+          return (
+            <View key={i} style={{ flex: 1, alignItems: "center" }}>
+              <Text style={{ color: colors.inkSoft, fontSize: 12, marginBottom: 4, minHeight: 16 }}>
+                {total > 0 ? formatTRY(total) : ""}
+              </Text>
+              <View style={{ height: maxHeight, justifyContent: "flex-end", width: "70%" }}>
+                {total > 0 ? (
+                  <View style={{ borderRadius: 4, overflow: "hidden" }}>
+                    {w.overdue > 0 && <View style={{ height: h(w.overdue), backgroundColor: colors.danger }} />}
+                    {w.pending > 0 && <View style={{ height: h(w.pending), backgroundColor: colors.primary }} />}
+                    {w.paid > 0 && <View style={{ height: h(w.paid), backgroundColor: colors.ok }} />}
+                  </View>
+                ) : (
+                  <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.line }} />
+                )}
+              </View>
+              <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>{w.label}</Text>
             </View>
-            <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>{w.label}</Text>
-          </View>
-        );
-      })}
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: "row", justifyContent: "center", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
+        <LegendDot color={colors.ok} label="Ödenen" />
+        <LegendDot color={colors.primary} label="Bekleyen" />
+        <LegendDot color={colors.danger} label="Geciken" />
+      </View>
+    </View>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+      <Text style={{ color: colors.inkSoft, fontSize: 11 }}>{label}</Text>
     </View>
   );
 }

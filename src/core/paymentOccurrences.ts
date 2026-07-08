@@ -163,6 +163,23 @@ export function generateNextOccurrencesForDebt(
   return out;
 }
 
+/**
+ * Türetilmiş (görsel) statü — gecikmenin TEK kaynağı.
+ * Ham DB statüsü yalnız ödeme aksiyonlarıyla değişir; vade geçince pending/partial
+ * kaydı burada `overdue` sayılır. Vade GÜNÜ henüz gecikme değildir.
+ */
+export function effectiveStatus(
+  o: { status: OccStatus; due_date: string },
+  today: Date = new Date()
+): OccStatus {
+  if (o.status === "pending" || o.status === "partial") {
+    const due = parseISODateLocal(o.due_date);
+    const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (due < t) return "overdue"; // vade günü geçince; vade günü henüz gecikme değil
+  }
+  return o.status; // paid/skipped/overdue aynen
+}
+
 /** Occurrence durumunu yeniden hesapla (ödendi/kısmi/gecikmiş…). */
 export function recalculateOccurrenceStatus(
   o: { due_date: string | Date; amount_due: number; amount_paid: number; status?: OccStatus },

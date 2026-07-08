@@ -28,6 +28,8 @@ export function Donut({ personCards, colors: palette }: { personCards: PersonCar
   const total = slices.reduce((s, x) => s + x.value, 0) || 1;
   const idx = Math.min(sel, slices.length - 1);
   const selected = slices[idx];
+  const modeLabel = mode === "debt" ? "Borç" : "Varlık";
+  const centerLabel = `${selected.label} · ${modeLabel}`;
 
   return (
     <Card>
@@ -44,7 +46,7 @@ export function Donut({ personCards, colors: palette }: { personCards: PersonCar
         data={slices}
         size={160}
         centerValue={selected.value}
-        centerLabel={selected.label}
+        centerLabel={centerLabel}
       />
 
       <View style={{ marginTop: spacing(1) }}>

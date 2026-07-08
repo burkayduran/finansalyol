@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import { formatTRY } from "@/core/format";
 import { parseISODateLocal } from "@/core/dates";
+import { effectiveStatus } from "@/core/paymentOccurrences";
 import { badge, colors, spacing } from "@/theme";
 import type { PaymentOccurrence, PaymentOccurrenceStatus } from "@/lib/database.types";
 
@@ -36,8 +37,12 @@ export function OccurrenceRow({
   onSkip?: () => void;
 }) {
   const remaining = Math.max(0, Number(occ.amount_due) - Number(occ.amount_paid));
-  const st = STATUS[occ.status];
-  const done = occ.status === "paid" || occ.status === "skipped";
+  const paid = Number(occ.amount_paid);
+  const eff = effectiveStatus(occ);
+  const st = STATUS[eff];
+  const done = eff === "paid" || eff === "skipped";
+  // Gecikmiş ama kısmi ödeme varsa bilgisi kaybolmasın.
+  const partialNote = eff === "overdue" && paid > 0;
   return (
     <View style={styles.row}>
       <View style={{ flex: 1 }}>
@@ -47,8 +52,15 @@ export function OccurrenceRow({
         <Text style={{ color: colors.inkSoft, fontSize: 13 }}>
           {personName ? `${personName} · ` : ""}{daysLeft(occ.due_date)}
         </Text>
-        <View style={[styles.badge, { backgroundColor: st.bg }]}>
-          <Text style={{ color: st.color, fontSize: 11, fontWeight: "700" }}>{st.label}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <View style={[styles.badge, { backgroundColor: st.bg }]}>
+            <Text style={{ color: st.color, fontSize: 11, fontWeight: "700" }}>{st.label}</Text>
+          </View>
+          {partialNote && (
+            <Text style={{ color: colors.inkSoft, fontSize: 11, marginTop: 4 }}>
+              kısmi ödendi: {formatTRY(paid)}
+            </Text>
+          )}
         </View>
       </View>
       <View style={{ alignItems: "flex-end", gap: 6 }}>
