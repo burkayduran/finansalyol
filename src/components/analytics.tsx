@@ -11,6 +11,7 @@ import type { PersonCard } from "@/hooks/useHousehold";
 import type { MonthlyFlow } from "@/core/cashflow";
 
 const TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+const TR_MONTHS_FULL = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
 export function Donut({ personCards, colors: palette }: { personCards: PersonCard[]; colors: string[] }) {
   const [mode, setMode] = useState<"debt" | "asset">("debt");
@@ -67,6 +68,7 @@ export function CashflowChartWrap({ projection, onDetail }: { projection: Monthl
   const months: CashflowMonth[] = projection.slice(0, 6).map((m) => ({
     monthKey: toISODateLocal(m.month),
     label: TR_MONTHS[m.month.getMonth()],
+    fullLabel: TR_MONTHS_FULL[m.month.getMonth()],
     income: m.income,
     outflow: m.expense + m.debtDue,
     net: m.income - m.expense - m.debtDue,
@@ -76,7 +78,7 @@ export function CashflowChartWrap({ projection, onDetail }: { projection: Monthl
 
   return (
     <Card>
-      <Text style={typography.cardTitle}>Nakit akışı · planlanan</Text>
+      <Text style={typography.cardTitle}>Planlanan nakit akışı</Text>
       <CashflowChart data={months} selectedMonthKey={sel} onSelectMonth={setSel} />
       {onDetail && (
         <Pressable onPress={onDetail}>

@@ -105,7 +105,7 @@ export default function AddAsset() {
 
   const save = async () => {
     if (!ensureHousehold(householdId)) return;
-    if (!ownerValid) return Alert.alert("Eksik", "Kime ait olduğunu seç.");
+    if (!ownerValid) return Alert.alert("Eksik", "Kimin için olduğunu seç.");
     if (!label.trim()) return Alert.alert("Eksik", "Bir açıklama gir.");
 
     let balanceVal = 0;

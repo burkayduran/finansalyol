@@ -30,18 +30,20 @@ export function Button({
 }: {
   title: string;
   onPress: () => void;
-  variant?: "primary" | "ghost" | "link";
+  variant?: "primary" | "ghost" | "neutral" | "link";
   loading?: boolean;
   disabled?: boolean;
   danger?: boolean; // yıkıcı aksiyon (sil/geri al) — link/ghost metni kırmızı
 }) {
   // Bakır = yönlendirme rengi: üçüncül link'ler bakır. Ghost = birincil-yakın (lacivert).
-  // Yıkıcı (danger) her zaman kırmızı.
+  // Neutral = eşit-seçenek/ikincil aksiyon (ink metin). Yıkıcı (danger) her zaman kırmızı.
   const textColor = danger
     ? colors.danger
     : variant === "link"
       ? colors.accent
-      : colors.primary;
+      : variant === "neutral"
+        ? colors.ink
+        : colors.primary;
   return (
     <Pressable
       onPress={onPress}
@@ -49,7 +51,7 @@ export function Button({
       style={({ pressed }) => [
         styles.btn,
         variant === "primary" && styles.btnPrimary,
-        variant === "ghost" && styles.btnGhost,
+        (variant === "ghost" || variant === "neutral") && styles.btnGhost,
         variant === "link" && styles.btnLink,
         (disabled || loading) && { opacity: 0.5 },
         pressed && { opacity: 0.85 },

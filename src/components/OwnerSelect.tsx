@@ -1,4 +1,4 @@
-// "Kime ait?" seçici — kişiler + Ortak/Hane. owner_type + person_id üretir.
+// "Kimin için?" seçici — kişiler + Ortak/Hane. owner_type + person_id üretir.
 import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { supabase } from "@/lib/supabase";
@@ -50,7 +50,7 @@ export function OwnerSelect({
 
   return (
     <View style={{ marginBottom: spacing(1.5) }}>
-      <Text style={styles.label}>Kime ait?</Text>
+      <Text style={styles.label}>Kimin için?</Text>
       <View style={styles.wrap}>
         {persons.map((p) => (
           <Pressable

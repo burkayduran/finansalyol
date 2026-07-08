@@ -1,12 +1,13 @@
 // Nakit akışı grafiği — aya dokununca seçili ay detayı. Mobile press odaklı.
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import Svg, { G, Line, Rect, Text as SvgText } from "react-native-svg";
-import { colors, spacing } from "@/theme";
+import Svg, { Circle, G, Line, Rect, Text as SvgText } from "react-native-svg";
+import { badge, colors, spacing } from "@/theme";
 import { formatTRY } from "@/core/format";
 
 export interface CashflowMonth {
   monthKey: string;
   label: string;
+  fullLabel: string; // ayrıntı başlığı için tam ay adı ("Temmuz")
   income: number;
   outflow: number;
   net: number;
@@ -23,7 +24,7 @@ export function CashflowChart({
   onSelectMonth?: (monthKey: string) => void;
   height?: number;
 }) {
-  const padBottom = 16;
+  const padBottom = 22;
   const chartH = height - padBottom;
   const max = Math.max(1, ...data.flatMap((m) => [m.income, m.outflow]));
   const n = Math.max(1, data.length);
@@ -41,11 +42,13 @@ export function CashflowChart({
             const incomeH = (m.income / max) * (chartH - 4);
             const outflowH = (m.outflow / max) * (chartH - 4);
             const isSel = m.monthKey === selected?.monthKey;
+            const opacity = isSel ? 1 : 0.45;
             return (
               <G key={m.monthKey}>
-                <Rect x={`${base - barW - 0.6}%`} y={chartH - incomeH} width={`${barW}%`} height={incomeH} rx={3} fill={colors.asset} opacity={isSel ? 1 : 0.5} />
-                <Rect x={`${base + 0.6}%`} y={chartH - outflowH} width={`${barW}%`} height={outflowH} rx={3} fill={m.net < 0 ? colors.danger : colors.inkSoft} opacity={isSel ? 1 : 0.5} />
-                <SvgText x={`${base}%`} y={height - 3} fontSize={9} fontWeight={isSel ? "700" : "400"} fill={isSel ? colors.ink : colors.muted} textAnchor="middle">{m.label}</SvgText>
+                <Rect x={`${base - barW - 0.6}%`} y={chartH - incomeH} width={`${barW}%`} height={incomeH} rx={3} fill={colors.asset} opacity={opacity} />
+                <Rect x={`${base + 0.6}%`} y={chartH - outflowH} width={`${barW}%`} height={outflowH} rx={3} fill={colors.danger} opacity={opacity} />
+                <SvgText x={`${base}%`} y={height - 9} fontSize={9} fontWeight={isSel ? "700" : "400"} fill={isSel ? colors.ink : colors.muted} textAnchor="middle">{m.label}</SvgText>
+                {m.net < 0 && <Circle cx={`${base}%`} cy={height - 4} r={1.5} fill={colors.danger} />}
               </G>
             );
           })}
@@ -60,15 +63,22 @@ export function CashflowChart({
         </View>
       </View>
 
+      <View style={styles.legend}>
+        <Text style={[styles.legendText, { color: colors.asset }]}>●</Text>
+        <Text style={styles.legendText}> Gelir · </Text>
+        <Text style={[styles.legendText, { color: colors.danger }]}>●</Text>
+        <Text style={styles.legendText}> Gider + borç</Text>
+      </View>
+
       {selected && (
         <View style={styles.detail}>
-          <Text style={{ fontWeight: "800", color: colors.ink, marginBottom: spacing(0.5) }}>{selected.label} ayrıntısı</Text>
+          <Text style={{ fontWeight: "800", color: colors.ink, marginBottom: spacing(0.5) }}>{selected.fullLabel} ayrıntısı</Text>
           <Row label="Gelir" value={formatTRY(selected.income)} color={colors.asset} />
           <Row label="Gider + borç ödemesi" value={formatTRY(selected.outflow)} color={colors.inkSoft} />
           <View style={styles.netRow}>
             <Text style={{ color: colors.inkSoft }}>Net</Text>
-            <View style={[styles.badge, { backgroundColor: selected.net < 0 ? "#fee2e2" : "#dcfce7" }]}>
-              <Text style={{ color: selected.net < 0 ? "#991b1b" : "#166534", fontWeight: "800" }}>
+            <View style={[styles.badge, { backgroundColor: selected.net < 0 ? badge.dangerBg : badge.okBg }]}>
+              <Text style={{ color: selected.net < 0 ? badge.dangerInk : badge.okInk, fontWeight: "800" }}>
                 {formatTRY(selected.net)}
               </Text>
             </View>
@@ -89,6 +99,8 @@ function Row({ label, value, color }: { label: string; value: string; color: str
 }
 
 const styles = {
+  legend: { flexDirection: "row" as const, justifyContent: "center" as const, marginTop: 2 },
+  legendText: { color: colors.inkSoft, fontSize: 11 },
   detail: { backgroundColor: colors.bg, borderRadius: 12, padding: spacing(1.5), marginTop: spacing(0.5) },
   row: { flexDirection: "row" as const, justifyContent: "space-between" as const, paddingVertical: 3 },
   netRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, marginTop: 4 },

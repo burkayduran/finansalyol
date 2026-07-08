@@ -96,7 +96,7 @@ export default function AddDebt() {
 
   const save = async () => {
     if (!ensureHousehold(householdId)) return;
-    if (!ownerValid) return Alert.alert("Eksik", "Kime ait olduğunu seç.");
+    if (!ownerValid) return Alert.alert("Eksik", "Kimin için olduğunu seç.");
     if (!bank.name.trim()) return Alert.alert("Eksik", "Banka seç.");
 
     const base: Record<string, unknown> = {
