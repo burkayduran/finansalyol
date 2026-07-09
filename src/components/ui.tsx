@@ -30,18 +30,20 @@ export function Button({
 }: {
   title: string;
   onPress: () => void;
-  variant?: "primary" | "ghost" | "link";
+  variant?: "primary" | "ghost" | "link" | "neutral";
   loading?: boolean;
   disabled?: boolean;
   danger?: boolean; // yıkıcı aksiyon (sil/geri al) — link/ghost metni kırmızı
 }) {
   // Bakır = yönlendirme rengi: üçüncül link'ler bakır. Ghost = birincil-yakın (lacivert).
-  // Yıkıcı (danger) her zaman kırmızı.
+  // Neutral = sakin günlük kayıt (beyaz zemin, ince çerçeve, ink metin). Yıkıcı her zaman kırmızı.
   const textColor = danger
     ? colors.danger
     : variant === "link"
       ? colors.accent
-      : colors.primary;
+      : variant === "neutral"
+        ? colors.ink
+        : colors.primary;
   return (
     <Pressable
       onPress={onPress}
@@ -50,6 +52,7 @@ export function Button({
         styles.btn,
         variant === "primary" && styles.btnPrimary,
         variant === "ghost" && styles.btnGhost,
+        variant === "neutral" && styles.btnNeutral,
         variant === "link" && styles.btnLink,
         (disabled || loading) && { opacity: 0.5 },
         pressed && { opacity: 0.85 },
@@ -296,6 +299,7 @@ export const styles = StyleSheet.create({
   },
   btnPrimary: { backgroundColor: colors.primary },
   btnGhost: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  btnNeutral: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   btnLink: { backgroundColor: "transparent", paddingVertical: 8 },
   btnText: { fontWeight: "700", fontSize: 16 },
   field: { marginBottom: spacing(1.5) },

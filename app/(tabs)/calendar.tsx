@@ -27,6 +27,7 @@ export default function Calendar() {
   const router = useRouter();
   const [tab, setTab] = useState<"month" | "future">("month");
   const [filter, setFilter] = useState<"all" | "pending" | "paid" | "overdue">("all");
+  const [selWeek, setSelWeek] = useState<number | null>(null); // haftalık grafik filtresi (0:1-7 … 3:22-31)
   const [openMonth, setOpenMonth] = useState<string | null>(null);
   const [payTarget, setPayTarget] = useState<{ debt: Debt; occ: PaymentOccurrence } | null>(null);
   useFocusEffect(useCallback(() => { data.reload(); track("calendar_opened"); }, [data.reload]));
@@ -96,14 +97,21 @@ export default function Calendar() {
     return true;
   };
 
+  // Haftalık grafik seçimi: gün → kova (0:1-7 … 3:22-31)
+  const weekOf = (o: PaymentOccurrence) => {
+    const day = parseISODateLocal(o.due_date).getDate();
+    return day <= 7 ? 0 : day <= 14 ? 1 : day <= 21 ? 2 : 3;
+  };
+  const matchWeek = (o: PaymentOccurrence) => selWeek == null || weekOf(o) === selWeek;
+
   // Gün bazlı gruplama
   const byDay = useMemo(() => {
     const map = new Map<string, PaymentOccurrence[]>();
-    monthAll.filter(matchFilter).sort((a, b) => a.due_date.localeCompare(b.due_date)).forEach((o) => {
+    monthAll.filter(matchFilter).filter(matchWeek).sort((a, b) => a.due_date.localeCompare(b.due_date)).forEach((o) => {
       (map.get(o.due_date) ?? map.set(o.due_date, []).get(o.due_date)!).push(o);
     });
     return [...map.entries()];
-  }, [data.occurrences, filter]);
+  }, [data.occurrences, filter, selWeek]);
 
   const futureMonths = useMemo(() => {
     const map = new Map<string, PaymentOccurrence[]>();
@@ -156,7 +164,18 @@ export default function Calendar() {
 
           {monthAll.length > 0 && (
             <Card>
-              <UpcomingBars weeks={weekBars} />
+              <UpcomingBars
+                weeks={weekBars}
+                selected={selWeek}
+                onSelect={(i) => setSelWeek((w) => (w === i ? null : i))}
+              />
+              {selWeek != null && (
+                <Pressable onPress={() => setSelWeek(null)} style={{ alignSelf: "center", paddingTop: spacing(1) }}>
+                  <Text style={{ color: colors.accent, fontWeight: "700", fontSize: 13 }}>
+                    {weekBars[selWeek].label} aralığı · temizle
+                  </Text>
+                </Pressable>
+              )}
             </Card>
           )}
 

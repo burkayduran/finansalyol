@@ -164,7 +164,7 @@ export default function Settings() {
         {editing === "profile" ? (
           <>
             <Field label="Ad Soyad" value={draftName} onChangeText={setDraftName} />
-            <Button title="Kaydet" onPress={saveEdit} />
+            <Button title="Kaydet" variant="neutral" onPress={saveEdit} />
           </>
         ) : (
           <>
@@ -180,7 +180,7 @@ export default function Settings() {
         {editing === "household" && (
           <>
             <Field label="Hane adı" value={draftName} onChangeText={setDraftName} />
-            <Button title="Kaydet" onPress={saveEdit} />
+            <Button title="Kaydet" variant="neutral" onPress={saveEdit} />
           </>
         )}
       </Card>

@@ -17,6 +17,9 @@ interface Invite {
   status: string;
 }
 
+// Bu sürüm tek hesapla en fazla 5 kişilik hane için tasarlandı.
+const MAX_PERSONS = 5;
+
 export default function Family() {
   const router = useRouter();
   const entitlement = useEntitlement();
@@ -46,6 +49,9 @@ export default function Family() {
 
   const addPerson = async () => {
     if (!newPerson.trim()) return;
+    if (persons.length >= MAX_PERSONS) {
+      return Alert.alert("Kişi sınırı", "Bu sürümde en fazla 5 kişi ekleyebilirsin.");
+    }
     if (entitlement === "free" && persons.length >= FREE_LIMITS.maxPersons) {
       return router.push("/paywall");
     }

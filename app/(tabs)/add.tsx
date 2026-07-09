@@ -9,7 +9,7 @@ const GROUPS: { title: string; items: { title: string; desc: string; href: strin
     title: "Borç & Ödeme",
     items: [
       { title: "Borç ekle", desc: "Kredi kartı, KMH, taksitli KMH veya kredi.", href: "/add-debt" },
-      { title: "Ödeme gir", desc: "Yaklaşan veya mevcut bir borç ödemesini işle.", href: "/calendar" },
+      { title: "Ödeme gir", desc: "Yaklaşan veya mevcut bir borç ödemesini işle.", href: "/pay" },
     ],
   },
   {

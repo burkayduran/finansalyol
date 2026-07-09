@@ -224,7 +224,7 @@ export default function AddDebt() {
         <Field label="Not (ops.)" value={note} onChangeText={setNote} placeholder="" />
       </Card>
 
-      <Button title="Kaydet" onPress={save} loading={saving} />
+      <Button title="Kaydet" variant="neutral" onPress={save} loading={saving} />
       {editId && <Button title="Borcu sil" variant="link" danger onPress={removeItem} />}
     </ScrollView>
   );

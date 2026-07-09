@@ -222,7 +222,7 @@ export default function AddAsset() {
           </>
         )}
       </Card>
-      <Button title="Kaydet" onPress={save} loading={saving} />
+      <Button title="Kaydet" variant="neutral" onPress={save} loading={saving} />
       {editId && <Button title="Varlığı sil" variant="link" danger onPress={removeItem} />}
     </ScrollView>
   );

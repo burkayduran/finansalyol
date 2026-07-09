@@ -15,6 +15,7 @@ export type AnalyticsEvent =
   | "payment_reversed"
   | "notification_enabled"
   | "calendar_opened"
+  | "pay_screen_opened"
   | "debt_detail_opened"
   | "asset_detail_opened"
   | "person_detail_opened"

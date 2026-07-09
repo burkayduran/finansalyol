@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
@@ -37,6 +37,18 @@ const CATEGORIES: Record<CashFlowDirection, { value: string; label: string }[]> 
 };
 
 const currencyOptions = CURRENCIES.map((c) => ({ value: c, label: c }));
+
+// "Sıklık" yerine yöne göre tip seçici. Değerler recurrence modeliyle birebir (monthly/one_time).
+const TYPE_OPTIONS: Record<CashFlowDirection, { value: string; label: string }[]> = {
+  income: [
+    { value: "monthly", label: "Düzenli gelir" },
+    { value: "one_time", label: "Tek seferlik gelir" },
+  ],
+  expense: [
+    { value: "monthly", label: "Düzenli gider" },
+    { value: "one_time", label: "Tek seferlik gider" },
+  ],
+};
 
 export default function AddCashflow() {
   const router = useRouter();
@@ -98,7 +110,7 @@ export default function AddCashflow() {
     if (!(owner.ownerType === "household" || owner.personId != null))
       return Alert.alert("Eksik", "Kime ait olduğunu seç.");
     const amountVal = parseTRYInput(amount);
-    if (amountVal == null || amountVal < 0) return Alert.alert("Eksik", "Tutar gir.");
+    if (amountVal == null || amountVal <= 0) return Alert.alert("Tutar", "Tutar 0'dan büyük olmalı.");
     let occurred: string | null = null;
     if (recurrence === "one_time") {
       occurred = toISODateLocal(occurredOn);
@@ -129,21 +141,12 @@ export default function AddCashflow() {
     <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
       <Card>
         <OwnerSelect value={owner} onChange={setOwner} />
-        {/* Sıklık — tek üst kontrol (Tür yön butonundan belli) */}
-        <Text style={styles.label}>Sıklık</Text>
-        <View style={styles.segment}>
-          {(["monthly", "one_time"] as const).map((r) => (
-            <Pressable
-              key={r}
-              onPress={() => setRecurrence(r)}
-              style={[styles.seg, recurrence === r && styles.segActive]}
-            >
-              <Text style={[styles.segText, recurrence === r && { color: colors.ink }]}>
-                {r === "monthly" ? "Her ay" : "Tek seferlik"}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <Select
+          label={direction === "income" ? "Gelir tipi" : "Gider tipi"}
+          value={recurrence}
+          options={TYPE_OPTIONS[direction]}
+          onChange={(v) => setRecurrence(v as "monthly" | "one_time")}
+        />
 
         <Select label="Kategori" value={category} options={CATEGORIES[direction]} onChange={setCategory} />
         <AmountField
@@ -165,25 +168,12 @@ export default function AddCashflow() {
         )}
         <Field label="Açıklama (opsiyonel)" value={label} onChangeText={setLabel} placeholder="örn. Ana maaş" />
       </Card>
-      <Button title="Kaydet" onPress={save} loading={saving} />
+      <Button title="Kaydet" variant="neutral" onPress={save} loading={saving} />
       {editId && <Button title="Kaydı sil" variant="link" danger onPress={removeItem} />}
     </ScrollView>
   );
 }
 
 const styles = {
-  label: { fontWeight: "600" as const, marginBottom: 6, color: colors.ink },
   fxNote: { color: colors.muted, fontSize: 13, marginTop: -spacing(0.5), marginBottom: spacing(1) },
-  segment: { flexDirection: "row" as const, gap: 6, marginBottom: spacing(1.5) },
-  seg: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.bg,
-    alignItems: "center" as const,
-  },
-  segActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
-  segText: { color: colors.inkSoft, fontWeight: "600" as const },
 };

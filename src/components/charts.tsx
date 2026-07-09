@@ -1,5 +1,5 @@
 // Hafif, kendi çizdiğimiz grafikler (navy palet). Ağır chart lib yok.
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import Svg, { Circle, G, Line, Rect, Text as SvgText, Polyline } from "react-native-svg";
 import { colors } from "@/theme";
 import { formatTRY } from "@/core/format";
@@ -106,8 +106,18 @@ export interface WeekBar {
   overdue: number;
 }
 
-/** Bu ay — haftalık ödeme yığın çubukları (ödenen/bekleyen/geciken). */
-export function UpcomingBars({ weeks, maxHeight = 90 }: { weeks: WeekBar[]; maxHeight?: number }) {
+/** Bu ay — haftalık ödeme yığın çubukları (ödenen/bekleyen/geciken). Tıklanınca hafta seçilir. */
+export function UpcomingBars({
+  weeks,
+  maxHeight = 90,
+  selected = null,
+  onSelect,
+}: {
+  weeks: WeekBar[];
+  maxHeight?: number;
+  selected?: number | null;
+  onSelect?: (i: number) => void;
+}) {
   const totals = weeks.map((w) => w.paid + w.pending + w.overdue);
   const max = Math.max(1, ...totals);
   return (
@@ -116,9 +126,15 @@ export function UpcomingBars({ weeks, maxHeight = 90 }: { weeks: WeekBar[]; maxH
         {weeks.map((w, i) => {
           const total = totals[i];
           const h = (v: number) => (total > 0 ? (v / max) * maxHeight : 0);
+          const isSel = selected === i;
           return (
-            <View key={i} style={{ flex: 1, alignItems: "center" }}>
-              <Text style={{ color: colors.inkSoft, fontSize: 12, marginBottom: 4, minHeight: 16 }}>
+            <Pressable
+              key={i}
+              onPress={() => onSelect?.(i)}
+              disabled={!onSelect}
+              style={{ flex: 1, alignItems: "center", opacity: selected != null && !isSel ? 0.5 : 1 }}
+            >
+              <Text style={{ color: colors.inkSoft, fontSize: 12, marginBottom: 4, minHeight: 16, fontWeight: isSel ? "700" : "400" }}>
                 {total > 0 ? formatTRY(total) : ""}
               </Text>
               <View style={{ height: maxHeight, justifyContent: "flex-end", width: "70%" }}>
@@ -132,8 +148,11 @@ export function UpcomingBars({ weeks, maxHeight = 90 }: { weeks: WeekBar[]; maxH
                   <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.line }} />
                 )}
               </View>
-              <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>{w.label}</Text>
-            </View>
+              <Text style={{ color: isSel ? colors.accent : colors.muted, fontSize: 11, marginTop: 4, fontWeight: isSel ? "700" : "400" }}>
+                {w.label}
+              </Text>
+              <View style={{ height: 2, width: "70%", marginTop: 2, borderRadius: 1, backgroundColor: isSel ? colors.accent : "transparent" }} />
+            </Pressable>
           );
         })}
       </View>
