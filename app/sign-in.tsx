@@ -43,7 +43,7 @@ export default function SignIn() {
     if (!email) return Alert.alert("E-posta gir", "Sıfırlama bağlantısı için e-postanı yaz.");
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "borctakipaile://reset-password",
+        redirectTo: "finansalyol://reset-password",
       });
       if (error) throw error;
       Alert.alert("Gönderildi", "Sıfırlama bağlantısı e-postana gönderildi.");

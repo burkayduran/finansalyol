@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "Borç Takip — Aile",
-    "slug": "borc-takip-aile",
+    "name": "Finansal Yol",
+    "slug": "finansal-yol",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "borctakipaile",
+    "scheme": "finansalyol",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "splash": {
@@ -14,10 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.borctakip.aile"
+      "bundleIdentifier": "com.finansalyol.app"
     },
     "android": {
-      "package": "com.borctakip.aile",
+      "package": "com.finansalyol.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#233056"

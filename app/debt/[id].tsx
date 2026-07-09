@@ -26,18 +26,33 @@ export default function DebtDetail() {
   const router = useRouter();
   const [debt, setDebt] = useState<Debt | null>(null);
   const [nextOcc, setNextOcc] = useState<PaymentOccurrence | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [tab, setTab] = useState<"ozet" | "icgoru">("ozet");
   const [payOpen, setPayOpen] = useState(false);
   const [extraWhatIf, setExtraWhatIf] = useState("");
 
   const load = async () => {
-    const { data } = await supabase.from("debts").select("*").eq("id", id).maybeSingle();
-    setDebt(data);
-    const { data: occ } = await supabase
-      .from("payment_occurrences").select("*").eq("debt_id", id)
-      .in("status", ["pending", "partial", "overdue"])
-      .order("due_date").limit(1).maybeSingle();
-    setNextOcc(occ ?? null);
+    setLoading(true);
+    const { data, error } = await supabase.from("debts").select("*").eq("id", id).maybeSingle();
+    if (error) {
+      if (__DEV__) console.warn("[debt-detail] borç sorgusu hatası:", error.message);
+      setDebt(null);
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+    setDebt(data ?? null);
+    setNotFound(data == null);
+    if (data) {
+      const { data: occ, error: occErr } = await supabase
+        .from("payment_occurrences").select("*").eq("debt_id", id)
+        .in("status", ["pending", "partial", "overdue"])
+        .order("due_date").limit(1).maybeSingle();
+      if (occErr && __DEV__) console.warn("[debt-detail] occurrence sorgusu hatası:", occErr.message);
+      setNextOcc(occ ?? null);
+    }
+    setLoading(false);
   };
   const skipThisMonth = () => {
     if (!nextOcc) return;
@@ -55,10 +70,21 @@ export default function DebtDetail() {
     track("debt_detail_opened");
   }, [id]);
 
-  if (!debt) {
+  if (loading) {
     return (
       <View style={{ flex: 1, padding: spacing(3) }}>
         <Text style={{ color: colors.inkSoft }}>Yükleniyor…</Text>
+      </View>
+    );
+  }
+
+  if (notFound || !debt) {
+    return (
+      <View style={{ flex: 1, padding: spacing(3), gap: spacing(2) }}>
+        <Text style={{ color: colors.ink, fontSize: 16, fontWeight: "700" }}>
+          Borç bulunamadı veya erişim yok.
+        </Text>
+        <Button title="Geri dön" variant="ghost" onPress={() => router.back()} />
       </View>
     );
   }

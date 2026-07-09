@@ -18,6 +18,22 @@ export default function People() {
       contentContainerStyle={{ padding: spacing(2) }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />}
     >
+      {data.personCards.length > 0 && (
+        <Card>
+          <Text style={[typography.cardTitle, { color: colors.ink }]}>Aile özeti</Text>
+          <Text style={[typography.label, { color: colors.inkSoft, marginTop: spacing(1) }]}>Net durum</Text>
+          <Text style={{ color: data.net < 0 ? colors.danger : colors.ink, fontSize: 22, fontWeight: "800" }}>
+            {formatTRY(data.net)}
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing(1) }}>
+            <SummaryCell label="Toplam borç" value={formatTRY(data.totalDebt)} />
+            <SummaryCell label="Toplam varlık" value={formatTRY(data.totalAsset)} />
+            <SummaryCell label="Bu ay ödenecek" value={formatTRY(data.thisMonthDue)} />
+            <SummaryCell label="Kişi sayısı" value={`${data.persons.length}/5`} />
+          </View>
+        </Card>
+      )}
+
       {data.personCards.length === 0 && (
         <Card>
           <Text style={[typography.label, { color: colors.inkSoft }]}>Henüz kişi yok. Aile bölümünden kişi ekle.</Text>
@@ -61,6 +77,15 @@ export default function People() {
 function Cell({ label, value }: { label: string; value: string }) {
   return (
     <View>
+      <Text style={[typography.label, { color: colors.inkSoft }]}>{label}</Text>
+      <Text style={{ color: colors.ink, fontSize: 14, fontWeight: "700" }}>{value}</Text>
+    </View>
+  );
+}
+
+function SummaryCell({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ width: "50%", paddingVertical: 4 }}>
       <Text style={[typography.label, { color: colors.inkSoft }]}>{label}</Text>
       <Text style={{ color: colors.ink, fontSize: 14, fontWeight: "700" }}>{value}</Text>
     </View>
