@@ -36,3 +36,26 @@ export function parseTRYInput(raw: string): number | null {
   const value = Number(normalized);
   return Number.isFinite(value) ? value : null;
 }
+
+/**
+ * Aylık faiz YÜZDE girişini ("3,75" veya "3.75") ONDALIK orana çevirir (0.0375).
+ * Para parser'ından AYRIDIR: kullanıcı yüzde yazar, biz oranı saklarız.
+ * Hem virgül hem nokta ondalık ayracı kabul edilir.
+ */
+export function parseMonthlyPercentInput(raw: string): number | null {
+  if (raw == null) return null;
+  const cleaned = raw.replace(/[^\d.,-]/g, "").trim();
+  if (cleaned === "") return null;
+  // Tek bir ondalık ayracı varsayımı: hem "," hem "." ondalık kabul edilir (yüzde, binlik yok).
+  const normalized = cleaned.replace(",", ".");
+  const pct = Number(normalized);
+  if (!Number.isFinite(pct)) return null;
+  return pct / 100;
+}
+
+/** Ondalık aylık oranı ("0.0375") yüzde giriş metnine çevirir ("3,75"). */
+export function formatRateForInput(rate: number | null | undefined): string {
+  if (rate == null || !Number.isFinite(rate)) return "";
+  const pct = Number((rate * 100).toFixed(4));
+  return String(pct).replace(".", ",");
+}

@@ -5,7 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { AmountField, BankSelect, Button, Card, DateField, Field, type BankValue } from "@/components/ui";
 import { OwnerSelect, type OwnerValue } from "@/components/OwnerSelect";
-import { parseTRYInput, formatTRY } from "@/core/format";
+import { parseTRYInput, formatTRY, parseMonthlyPercentInput, formatRateForInput } from "@/core/format";
+import { normalizeStoredMonthlyRate } from "@/core/rateConfig";
 import { toISODateLocal, parseISODateLocal } from "@/core/dates";
 import { track } from "@/lib/analytics";
 import { ensureHousehold, handleSaveError } from "@/lib/errors";
@@ -61,7 +62,8 @@ export default function AddDebt() {
       setBank({ code: d.bank_code ?? "", name: d.bank_name ?? d.bank ?? "" });
       setLabel(d.label ?? "");
       setNote(d.note ?? "");
-      setRate(d.user_monthly_rate != null ? String(d.user_monthly_rate) : "");
+      // Eski yanlış saklanmış oranları normalize et, yüzde metnine çevir (3,75).
+      setRate(formatRateForInput(normalizeStoredMonthlyRate(d.user_monthly_rate)));
       const bal = d.current_balance ?? d.balance;
       setBalance(bal != null ? String(bal) : "");
       setCardLimit(d.card_limit != null ? String(d.card_limit) : "");
@@ -109,7 +111,7 @@ export default function AddDebt() {
       bank_name: bank.name.trim(),
       label: label.trim() || null,
       note: note.trim() || null,
-      user_monthly_rate: parseTRYInput(rate),
+      user_monthly_rate: parseMonthlyPercentInput(rate),
       is_active: true,
       reminder_enabled: true,
       currency: "TRY",

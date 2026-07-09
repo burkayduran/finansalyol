@@ -1,7 +1,7 @@
 // Nakit akışı grafiği — aya dokununca seçili ay detayı. Mobile press odaklı.
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { G, Line, Rect, Text as SvgText } from "react-native-svg";
-import { colors, spacing } from "@/theme";
+import { badge, colors, spacing } from "@/theme";
 import { formatTRY } from "@/core/format";
 
 export interface CashflowMonth {
@@ -43,8 +43,9 @@ export function CashflowChart({
             const isSel = m.monthKey === selected?.monthKey;
             return (
               <G key={m.monthKey}>
-                <Rect x={`${base - barW - 0.6}%`} y={chartH - incomeH} width={`${barW}%`} height={incomeH} rx={3} fill={colors.asset} opacity={isSel ? 1 : 0.5} />
-                <Rect x={`${base + 0.6}%`} y={chartH - outflowH} width={`${barW}%`} height={outflowH} rx={3} fill={m.net < 0 ? colors.danger : colors.inkSoft} opacity={isSel ? 1 : 0.5} />
+                {/* Sakin palet: gelir soft yeşil, gider/çıkış her ay sabit slate (nötr) — kırmızı yok. */}
+                <Rect x={`${base - barW - 0.6}%`} y={chartH - incomeH} width={`${barW}%`} height={incomeH} rx={3} fill={colors.asset} opacity={isSel ? 0.9 : 0.45} />
+                <Rect x={`${base + 0.6}%`} y={chartH - outflowH} width={`${barW}%`} height={outflowH} rx={3} fill={colors.inkSoft} opacity={isSel ? 0.9 : 0.45} />
                 <SvgText x={`${base}%`} y={height - 3} fontSize={9} fontWeight={isSel ? "700" : "400"} fill={isSel ? colors.ink : colors.muted} textAnchor="middle">{m.label}</SvgText>
               </G>
             );
@@ -67,8 +68,8 @@ export function CashflowChart({
           <Row label="Gider + borç ödemesi" value={formatTRY(selected.outflow)} color={colors.inkSoft} />
           <View style={styles.netRow}>
             <Text style={{ color: colors.inkSoft }}>Net</Text>
-            <View style={[styles.badge, { backgroundColor: selected.net < 0 ? "#fee2e2" : "#dcfce7" }]}>
-              <Text style={{ color: selected.net < 0 ? "#991b1b" : "#166534", fontWeight: "800" }}>
+            <View style={[styles.badge, { backgroundColor: selected.net < 0 ? badge.dangerBg : badge.okBg }]}>
+              <Text style={{ color: selected.net < 0 ? badge.dangerInk : badge.okInk, fontWeight: "800" }}>
                 {formatTRY(selected.net)}
               </Text>
             </View>

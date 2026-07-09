@@ -5,14 +5,22 @@ import { supabase } from "@/lib/supabase";
 import { Button, Card, Field } from "@/components/ui";
 import { PaymentModal } from "@/components/PaymentModal";
 import { skipOccurrence } from "@/lib/occurrences";
+import { fetchRateCaps } from "@/lib/rateCaps";
 import { track } from "@/lib/analytics";
 import { formatTRY, formatPercent, parseTRYInput } from "@/core/format";
 import { daysUntilDue, formatShortDate, nextDueDate } from "@/core/dates";
 import { mandatoryMinimum } from "@/core/minimum";
 import { outstandingBalance } from "@/core/installment";
 import { minimumTrap, avoidedInterestFromExtra, type TrapVerdict } from "@/core/interest";
+import type { RateCap, RateSource } from "@/core/rateConfig";
 import { colors, spacing } from "@/theme";
 import type { Debt, PaymentOccurrence } from "@/lib/database.types";
+
+const RATE_SOURCE_LABEL: Record<RateSource, string> = {
+  user: "senin girdiğin oran",
+  rate_table: "güncel oran tablosu",
+  tcmb_cap: "TCMB üst sınırı (tahmini)",
+};
 
 const TRAP_TEXT: Record<TrapVerdict, string> = {
   shrinks: "Sadece asgarisini ödersen borç azalır ama kalan tutara faiz işler. Biraz fazlası daha hızlı bitirir.",
@@ -28,6 +36,7 @@ export default function DebtDetail() {
   const [nextOcc, setNextOcc] = useState<PaymentOccurrence | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [caps, setCaps] = useState<RateCap[]>([]);
   const [tab, setTab] = useState<"ozet" | "icgoru">("ozet");
   const [payOpen, setPayOpen] = useState(false);
   const [extraWhatIf, setExtraWhatIf] = useState("");
@@ -67,6 +76,7 @@ export default function DebtDetail() {
   };
   useEffect(() => {
     load();
+    fetchRateCaps().then(setCaps).catch(() => setCaps([]));
     track("debt_detail_opened");
   }, [id]);
 
@@ -107,6 +117,7 @@ export default function DebtDetail() {
     installment: debt.monthly_installment ?? debt.installment,
     userMinimum: debt.user_minimum_payment ?? debt.user_minimum,
     userMonthlyRate: debt.user_monthly_rate,
+    caps,
   };
   const minimum = mandatoryMinimum(insightInput);
   const days = daysUntilDue(debt.due_day);
@@ -174,8 +185,11 @@ export default function DebtDetail() {
             <Text style={styles.h}>Sadece asgarisini ödersen</Text>
             <Text style={{ color: colors.inkSoft }}>{TRAP_TEXT[trap.verdict]}</Text>
             <Text style={{ color: colors.muted, fontSize: 13, marginTop: spacing(1) }}>
-              Tahmini aylık faiz {formatTRY(trap.nextMonthInterest)} · {formatPercent(trap.monthlyRate)}/ay
+              Tahmini aylık faiz {formatTRY(trap.nextMonthInterest)}
               {trap.rateIsEstimate ? "  ≈ tahmini" : ""}
+            </Text>
+            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
+              Kullanılan aylık faiz: {formatPercent(trap.monthlyRate)}/ay · Kaynak: {RATE_SOURCE_LABEL[trap.rateSource]}
             </Text>
           </Card>
 

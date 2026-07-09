@@ -55,7 +55,7 @@ export default function Pay() {
     <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
       {/* Bölüm 1 — Bekleyen ödemeler */}
       <Card>
-        <Text style={[typography.cardTitle, { color: colors.ink }]}>Bekleyen ödemeler</Text>
+        <Text style={[typography.cardTitle, { color: colors.ink }]}>Planlı ödemeden ödeme gir</Text>
         {open.length === 0 ? (
           <Text style={{ color: colors.inkSoft, marginTop: spacing(1) }}>
             Bekleyen ödeme bulunamadı.{"\n"}Aşağıdan aktif bir borca manuel ödeme girebilirsin.

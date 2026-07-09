@@ -3,7 +3,6 @@ import { supabase } from "./supabase";
 import type { Debt, Payment, PaymentOccurrence } from "./database.types";
 import {
   generateNextOccurrencesForDebt,
-  recalculateOccurrenceStatus,
   type DebtForOcc,
 } from "@/core/paymentOccurrences";
 
@@ -12,6 +11,10 @@ const MONTHS_AHEAD = 12;
 /**
  * Aktif borçlar için beklenen ödeme olaylarını üretip ekler (idempotent).
  * Unique index (debt_id, due_date, kind) sayesinde mevcutların üzerine yazmaz.
+ *
+ * NOT: Ham DB status'u burada overdue'ya ÇEVİRMEYİZ. Gecikme türetilmiş statüdür
+ * (`effectiveStatus`); ham status yalnız ödeme aksiyonlarıyla değişir. Böylece
+ * görsel/filtre/özet tek kaynaktan (effectiveStatus) tutarlı kalır, çelişki olmaz.
  */
 export async function ensureOccurrences(householdId: string, debts: Debt[]): Promise<void> {
   const drafts = debts
@@ -22,23 +25,6 @@ export async function ensureOccurrences(householdId: string, debts: Debt[]): Pro
   await supabase
     .from("payment_occurrences")
     .upsert(drafts, { onConflict: "debt_id,due_date,kind", ignoreDuplicates: true });
-
-  // Geçmiş & ödenmemiş occurrence'ları overdue'ya çek (status tazele).
-  await refreshOverdue(householdId);
-}
-
-async function refreshOverdue(householdId: string): Promise<void> {
-  const { data } = await supabase
-    .from("payment_occurrences")
-    .select("*")
-    .eq("household_id", householdId)
-    .in("status", ["pending", "partial"]);
-  for (const o of data ?? []) {
-    const next = recalculateOccurrenceStatus(o);
-    if (next !== o.status) {
-      await supabase.from("payment_occurrences").update({ status: next }).eq("id", o.id);
-    }
-  }
 }
 
 export interface RecordPaymentInput {

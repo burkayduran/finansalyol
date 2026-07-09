@@ -35,9 +35,12 @@ export default function HouseholdDetail() {
     <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
       <Card>
         <Text style={{ color: colors.inkSoft }}>Net durum</Text>
-        <Text style={{ fontSize: 28, fontWeight: "800", color: totalAsset - totalDebt < 0 ? colors.danger : colors.ink }}>
-          {formatTRY(totalAsset - totalDebt)}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: totalAsset - totalDebt < 0 ? colors.danger : colors.asset }} />
+          <Text style={{ fontSize: 28, fontWeight: "800", color: colors.ink }}>
+            {formatTRY(totalAsset - totalDebt)}
+          </Text>
+        </View>
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: spacing(1) }}>
           <Text style={{ color: colors.debt, fontWeight: "700" }}>Borç {formatTRY(totalDebt)}</Text>
           <Text style={{ color: colors.asset, fontWeight: "700" }}>Varlık {formatTRY(totalAsset)}</Text>

@@ -1,7 +1,7 @@
 // Faiz tahmini & asgari-tuzağı içgörüsü (F1 — borcun içinde isteğe bağlı sekme).
 // Dil sıcak ve az; iç prensip "tavan ≠ gerçek" hesapta uygulanır, ekrana yazılmaz.
 
-import { resolveMonthlyRate, type DebtKind } from "./rateConfig";
+import { resolveMonthlyRate, type DebtKind, type RateCap, type RateSource } from "./rateConfig";
 import { mandatoryMinimum } from "./minimum";
 
 export interface InsightInput {
@@ -11,6 +11,8 @@ export interface InsightInput {
   installment?: number | null;
   userMinimum?: number | null;
   userMonthlyRate?: number | null;
+  /** Dinamik oran tablosu (Supabase rate_caps); yoksa kod-içi fallback. */
+  caps?: RateCap[];
 }
 
 export type TrapVerdict = "shrinks" | "barely_shrinks" | "not_shrinking" | "growing";
@@ -23,6 +25,7 @@ export interface MinimumTrap {
   principalReduction: number;
   /** Kullanılan aylık oran ve kaynağı (≈ tahmini rozeti için). */
   monthlyRate: number;
+  rateSource: RateSource;
   rateIsEstimate: boolean;
 }
 
@@ -36,7 +39,8 @@ export function minimumTrap(input: InsightInput): MinimumTrap {
   const { monthlyRate, source } = resolveMonthlyRate(
     input.kind,
     input.balance,
-    input.userMonthlyRate
+    input.userMonthlyRate,
+    input.caps
   );
   const minimum = mandatoryMinimum(input);
   const interest = monthlyInterest(input.balance, monthlyRate);
@@ -56,7 +60,8 @@ export function minimumTrap(input: InsightInput): MinimumTrap {
     nextMonthInterest: interest,
     principalReduction,
     monthlyRate,
-    rateIsEstimate: source === "tcmb_cap",
+    rateSource: source,
+    rateIsEstimate: source !== "user",
   };
 }
 
@@ -65,6 +70,6 @@ export function minimumTrap(input: InsightInput): MinimumTrap {
  * faizi (yaklaşık, tek ay, tavan orana göre).
  */
 export function avoidedInterestFromExtra(input: InsightInput, extra: number): number {
-  const { monthlyRate } = resolveMonthlyRate(input.kind, input.balance, input.userMonthlyRate);
+  const { monthlyRate } = resolveMonthlyRate(input.kind, input.balance, input.userMonthlyRate, input.caps);
   return Math.min(extra, input.balance) * monthlyRate;
 }

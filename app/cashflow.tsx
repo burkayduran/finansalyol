@@ -47,15 +47,12 @@ export default function Cashflow() {
     <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
       <Card>
         <Text style={{ color: colors.inkSoft, fontSize: 14 }}>Bu ay net</Text>
-        <Text
-          style={{
-            fontSize: 30,
-            fontWeight: "800",
-            color: data.monthlyNet < 0 ? colors.danger : colors.ink,
-          }}
-        >
-          {formatTRY(data.monthlyNet)}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: data.monthlyNet < 0 ? colors.danger : colors.asset }} />
+          <Text style={{ fontSize: 30, fontWeight: "800", color: colors.ink }}>
+            {formatTRY(data.monthlyNet)}
+          </Text>
+        </View>
       </Card>
 
       <View style={{ flexDirection: "row", gap: 8, marginBottom: spacing(1) }}>

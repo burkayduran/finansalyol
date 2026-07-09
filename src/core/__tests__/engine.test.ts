@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { parseTRYInput, formatTRY, formatPercent } from "../format";
+import { parseTRYInput, formatTRY, formatPercent, parseMonthlyPercentInput, formatRateForInput } from "../format";
 import { mandatoryMinimum, bddkMinimumRate } from "../minimum";
-import { resolveMonthlyRate, tcmbCapRate } from "../rateConfig";
+import { resolveMonthlyRate, tcmbCapRate, normalizeStoredMonthlyRate, capRateFromTable, type RateCap } from "../rateConfig";
 import { minimumTrap, avoidedInterestFromExtra } from "../interest";
 import { daysUntilDue, toISODateLocal, parseISODateLocal } from "../dates";
 import { depositYield } from "../deposit";
@@ -127,6 +127,53 @@ describe("TCMB cap rate (statement-debt tier)", () => {
     const r = resolveMonthlyRate("credit_card", 71000, 0.029);
     expect(r.monthlyRate).toBe(0.029);
     expect(r.source).toBe("user");
+  });
+});
+
+describe("faiz yüzde parse & normalize (v1.8 bug fix)", () => {
+  it("parseMonthlyPercentInput: yüzde metnini ondalık orana çevirir", () => {
+    expect(parseMonthlyPercentInput("3,75")).toBeCloseTo(0.0375);
+    expect(parseMonthlyPercentInput("3.75")).toBeCloseTo(0.0375);
+    expect(parseMonthlyPercentInput("4,25")).toBeCloseTo(0.0425);
+    expect(parseMonthlyPercentInput("4.25")).toBeCloseTo(0.0425);
+    expect(parseMonthlyPercentInput("")).toBeNull();
+  });
+  it("formatRateForInput: ondalık oranı yüzde metnine çevirir", () => {
+    expect(formatRateForInput(0.0375)).toBe("3,75");
+    expect(formatRateForInput(0.0425)).toBe("4,25");
+    expect(formatRateForInput(null)).toBe("");
+  });
+  it("normalizeStoredMonthlyRate: yanlış saklanmış oranları toparlar", () => {
+    expect(normalizeStoredMonthlyRate(375)).toBeCloseTo(0.0375); // yüzde*100 hatası
+    expect(normalizeStoredMonthlyRate(3.75)).toBeCloseTo(0.0375); // yüzde saklanmış
+    expect(normalizeStoredMonthlyRate(0.0375)).toBeCloseTo(0.0375); // zaten oran
+    expect(normalizeStoredMonthlyRate(null)).toBeNull();
+  });
+  it("3,75 girişi %3,75 olarak görünür (uçtan uca)", () => {
+    const stored = parseMonthlyPercentInput("3,75")!; // 0.0375
+    const { monthlyRate, source } = resolveMonthlyRate("credit_card", 71000, stored);
+    expect(source).toBe("user");
+    expect(formatPercent(monthlyRate)).toBe("%3,75");
+  });
+});
+
+describe("rate_caps dinamik oran tablosu (v1.8)", () => {
+  const caps: RateCap[] = [
+    { debtKind: "credit_card", minAmount: null, maxAmount: 30000, monthlyRate: 0.03, effectiveDate: "2026-07-01" },
+    { debtKind: "credit_card", minAmount: 30000, maxAmount: 180000, monthlyRate: 0.036, effectiveDate: "2026-07-01" },
+  ];
+  it("capRateFromTable: dönem borcuna göre eşleşir", () => {
+    expect(capRateFromTable("credit_card", 20000, caps)).toBe(0.03);
+    expect(capRateFromTable("credit_card", 100000, caps)).toBe(0.036);
+    expect(capRateFromTable("kmh", 10000, caps)).toBeNull();
+  });
+  it("resolveMonthlyRate: tablo varsa rate_table, yoksa fallback", () => {
+    const fromTable = resolveMonthlyRate("credit_card", 100000, null, caps);
+    expect(fromTable.source).toBe("rate_table");
+    expect(fromTable.monthlyRate).toBe(0.036);
+    const fallback = resolveMonthlyRate("credit_card", 100000, null, []);
+    expect(fallback.source).toBe("tcmb_cap");
+    expect(fallback.monthlyRate).toBe(0.0375);
   });
 });
 

@@ -27,8 +27,9 @@ export const badge = {
   dangerBg: "#FEE2E2", dangerInk: "#991B1B",
 };
 
-// Pano donut paleti — aile kimliğine hizalı (mor çıktı; gri son sırada "Ortak/Diğer").
-export const SLICE_COLORS = ["#233056", "#C2772E", "#3E5A8C", "#1E7F5C", "#8C2F39", "#586079"];
+// Aile dağılım (kişi) paleti — SAKIN mavi/gri tonları. Kişi rengi borç/varlık
+// anlamı taşımaz; bu yüzden kırmızı/yeşil/bakır YOK. En fazla 5 kişi + Ortak/Hane.
+export const FAMILY_SLICE_COLORS = ["#233056", "#3E5A8C", "#586079", "#7B8EA8", "#A9B6C8", "#C6D0DD"];
 
 export const radius = 16;
 export const spacing = (n: number) => n * 8;

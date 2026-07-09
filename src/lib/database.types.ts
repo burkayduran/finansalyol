@@ -201,6 +201,19 @@ export type NotificationPrefs = {
   digest_weekday: number;
 }
 
+export type RateCapRow = {
+  id: string;
+  debt_kind: DebtKind;
+  min_amount: number | null;
+  max_amount: number | null;
+  monthly_rate: number;
+  effective_date: string;
+  source_name: string | null;
+  source_url: string | null;
+  last_checked_at: string | null;
+  created_at: string;
+}
+
 // Minimal Database tipi — supabase-js generic'i için yeterli yüzey.
 type Row<T> = { Row: T; Insert: Partial<T>; Update: Partial<T>; Relationships: [] };
 
@@ -233,6 +246,7 @@ export interface Database {
       payment_occurrences: Row<PaymentOccurrence>;
       cash_flows: Row<CashFlow>;
       fx_rates: Row<FxRate>;
+      rate_caps: Row<RateCapRow>;
       account_deletion_requests: Row<AccountDeletionRequest>;
       push_tokens: Row<{
         id: string;

@@ -7,7 +7,7 @@ import { PaymentModal } from "@/components/PaymentModal";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { Donut, CashflowChartWrap } from "@/components/analytics";
 import { formatTRY } from "@/core/format";
-import { colors, spacing, typography, SLICE_COLORS } from "@/theme";
+import { colors, spacing, typography, FAMILY_SLICE_COLORS } from "@/theme";
 import type { Debt, PaymentOccurrence } from "@/lib/database.types";
 
 const TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
@@ -86,7 +86,7 @@ export default function Dashboard() {
       )}
 
       {/* 2 — Varlık vs Borç görseli (kişi bazlı donut) */}
-      {!empty && <Donut personCards={data.personCards} colors={SLICE_COLORS} />}
+      {!empty && <Donut personCards={data.personCards} colors={FAMILY_SLICE_COLORS} />}
 
       {/* 3 — Ödeme Özeti (tek kart) */}
       {!empty && (
