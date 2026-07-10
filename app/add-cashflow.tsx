@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { AmountField, Button, Card, DateField, Field, Select } from "@/components/ui";
 import { OwnerSelect, type OwnerValue } from "@/components/OwnerSelect";
+import { PremiumGate } from "@/components/PremiumGate";
+import { useEntitlement } from "@/config/entitlements";
 import { parseTRYInput, formatTRY } from "@/core/format";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@/core/currencies";
 import { toTRY } from "@/core/fx";
@@ -54,6 +56,7 @@ export default function AddCashflow() {
   const router = useRouter();
   const navigation = useNavigation();
   const { householdId } = useSession();
+  const { features } = useEntitlement();
   const fxRates = useFxRates();
   const params = useLocalSearchParams<{ direction?: string; person?: string; id?: string }>();
   const editId = params.id;
@@ -136,6 +139,14 @@ export default function AddCashflow() {
     if (!editId) track("cashflow_item_added", { direction, recurrence });
     router.back();
   };
+
+  if (!features.canUseCashflow) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
+        <PremiumGate feature="cashflow" />
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={{ padding: spacing(2) }}>

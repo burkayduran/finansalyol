@@ -5,6 +5,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider, useSession } from "@/providers/SessionProvider";
+import { EntitlementProvider } from "@/config/entitlements";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { registerPushToken } from "@/lib/push";
 import { handleAuthUrl } from "@/lib/deepLinks";
@@ -82,6 +83,7 @@ function RootNavigator() {
       <Stack.Screen name="projection" options={{ headerShown: true, title: "Gelecek aylar" }} />
       <Stack.Screen name="cashflow" options={{ headerShown: true, title: "Nakit akışı" }} />
       <Stack.Screen name="pay" options={{ presentation: "modal", headerShown: true, title: "Ödeme gir" }} />
+      <Stack.Screen name="consult" options={{ presentation: "modal", headerShown: true, title: "Borç Azaltma Planı" }} />
       <Stack.Screen name="family" options={{ headerShown: true, title: "Aile" }} />
       <Stack.Screen name="paywall" options={{ presentation: "modal", headerShown: true, title: "Premium" }} />
     </Stack>
@@ -93,8 +95,10 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <SessionProvider>
-          <StatusBar style="dark" />
-          <RootNavigator />
+          <EntitlementProvider>
+            <StatusBar style="dark" />
+            <RootNavigator />
+          </EntitlementProvider>
         </SessionProvider>
       </ErrorBoundary>
     </SafeAreaProvider>

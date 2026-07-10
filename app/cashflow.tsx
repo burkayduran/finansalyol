@@ -3,6 +3,8 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
+import { PremiumGate } from "@/components/PremiumGate";
+import { useEntitlement } from "@/config/entitlements";
 import { CashflowChartWrap } from "@/components/analytics";
 import { mandatoryMinimum } from "@/core/minimum";
 import { projectCashflow, type CashflowDebt, type CashflowEntry } from "@/core/cashflow";
@@ -10,11 +12,13 @@ import { formatTRY } from "@/core/format";
 import { parseISODateLocal } from "@/core/dates";
 import { colors, spacing } from "@/theme";
 
-const TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+// Tabloda tam ay adı (grafikte kısa kalır; uzun isim grafikte taşar).
+const TR_MONTHS_FULL = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
 export default function Cashflow() {
   const router = useRouter();
   const data = useHousehold();
+  const { features } = useEntitlement();
 
   useFocusEffect(useCallback(() => { data.reload(); }, [data.reload]));
 
@@ -42,6 +46,14 @@ export default function Cashflow() {
   }, [data.cashFlows, data.debts, data.fxRateFor, data.debtOutstanding]);
 
   const hasData = data.cashFlows.length > 0 || data.debts.length > 0;
+
+  if (!features.canUseCashflow) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
+        <PremiumGate feature="cashflow" />
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
@@ -78,7 +90,7 @@ export default function Cashflow() {
           {rows.map((r) => (
             <View key={r.month.toISOString()} style={styles.row}>
               <Text style={[styles.cell, { flex: 1, color: colors.ink }]}>
-                {TR_MONTHS[r.month.getMonth()]} {String(r.month.getFullYear()).slice(2)}
+                {TR_MONTHS_FULL[r.month.getMonth()]} {String(r.month.getFullYear()).slice(2)}
               </Text>
               <Text style={[styles.cell, styles.num, { color: colors.asset }]}>{formatTRY(r.income)}</Text>
               <Text style={[styles.cell, styles.num, { color: colors.inkSoft }]}>

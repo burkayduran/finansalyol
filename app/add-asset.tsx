@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/providers/SessionProvider";
 import { AmountField, Button, Card, Field, Select } from "@/components/ui";
 import { OwnerSelect, type OwnerValue } from "@/components/OwnerSelect";
+import { PremiumGate } from "@/components/PremiumGate";
+import { useEntitlement } from "@/config/entitlements";
 import { parseTRYInput, formatTRY } from "@/core/format";
 import { formatShortDate, toISODateLocal } from "@/core/dates";
 import { depositYield } from "@/core/deposit";
@@ -30,6 +32,7 @@ const currencyOptions = CURRENCIES.map((c) => ({ value: c, label: c }));
 export default function AddAsset() {
   const router = useRouter();
   const { householdId } = useSession();
+  const { features } = useEntitlement();
   const navigation = useNavigation();
   const fxRates = useFxRates();
   const params = useLocalSearchParams<{ person?: string; id?: string }>();
@@ -150,6 +153,14 @@ export default function AddAsset() {
     if (!editId) track("asset_added", { asset_kind: kind, owner_type: owner.ownerType });
     router.back();
   };
+
+  if (!features.canUseAssets) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
+        <PremiumGate feature="assets" />
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={{ padding: spacing(2) }}>

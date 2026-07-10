@@ -7,6 +7,7 @@ import { PaymentModal } from "@/components/PaymentModal";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { Donut, CashflowChartWrap } from "@/components/analytics";
 import { formatTRY } from "@/core/format";
+import { CONSULT_PRICE, CONSULT_LAUNCH_PRICE } from "@/core/plan";
 import { colors, spacing, typography, FAMILY_SLICE_COLORS } from "@/theme";
 import type { Debt, PaymentOccurrence } from "@/lib/database.types";
 
@@ -147,6 +148,23 @@ export default function Dashboard() {
           <Text style={[typography.cardTitle, { marginTop: spacing(1), marginBottom: spacing(0.5) }]}>Grafikler</Text>
           <CashflowChartWrap projection={data.projection} onDetail={() => router.push("/cashflow")} />
         </>
+      )}
+
+      {/* 5 — Borç Azaltma Planı danışmanlık CTA (nakit akışının hemen altında) */}
+      {!empty && (
+        <Card>
+          <Text style={typography.cardTitle}>Borçlarını daha rahat ödemek için plan çıkaralım mı?</Text>
+          <Text style={{ color: colors.inkSoft, marginTop: spacing(1) }}>
+            Gelir, gider, borç ve ödeme takvimine göre sana özel borç azaltma planı hazırlayalım.
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginTop: spacing(1) }}>
+            <Text style={{ color: colors.ink, fontWeight: "800", fontSize: 18 }}>Lansmana özel ₺{CONSULT_LAUNCH_PRICE}</Text>
+            <Text style={{ color: colors.muted, fontSize: 13, textDecorationLine: "line-through" }}>₺{CONSULT_PRICE}</Text>
+          </View>
+          <Pressable onPress={() => router.push("/consult")} style={styles.cta}>
+            <Text style={{ color: colors.primaryInk, fontWeight: "700" }}>Plan görüşmesi al</Text>
+          </Pressable>
+        </Card>
       )}
 
       <PaymentModal

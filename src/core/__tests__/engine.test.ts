@@ -8,6 +8,7 @@ import { depositYield } from "../deposit";
 import { projectMonths } from "../projection";
 import { installmentsPaid, outstandingInstallment, outstandingBalance, installmentsCoveredByPayment } from "../installment";
 import { assetValueTRY, assetPnlTRY, assetNativeValue } from "../assets";
+import { planFeatures, PLAN_PERSON_LIMIT, productForPersonCount, isPremium } from "../plan";
 import { projectCashflow } from "../cashflow";
 
 describe("format", () => {
@@ -154,6 +155,31 @@ describe("faiz yüzde parse & normalize (v1.8 bug fix)", () => {
     const { monthlyRate, source } = resolveMonthlyRate("credit_card", 71000, stored);
     expect(source).toBe("user");
     expect(formatPercent(monthlyRate)).toBe("%3,75");
+  });
+});
+
+describe("plan / entitlement (v1.9)", () => {
+  it("free plan: premium özellikler kapalı, 1 kişi", () => {
+    const f = planFeatures("free");
+    expect(f.canUseFamily).toBe(false);
+    expect(f.canUseCashflow).toBe(false);
+    expect(f.canUseAssets).toBe(false);
+    expect(f.canUseEmailReminder).toBe(false);
+    expect(f.personLimit).toBe(1);
+    expect(isPremium("free")).toBe(false);
+  });
+  it("family planları: premium açık, kişi limiti plana göre", () => {
+    expect(planFeatures("family_4").canUseFamily).toBe(true);
+    expect(planFeatures("family_4").personLimit).toBe(4);
+    expect(planFeatures("family_7").personLimit).toBe(7);
+    expect(isPremium("family_4")).toBe(true);
+    expect(PLAN_PERSON_LIMIT.family_5).toBe(5);
+  });
+  it("productForPersonCount: kişi sayısını karşılayan en küçük tier", () => {
+    expect(productForPersonCount(4).plan).toBe("family_4");
+    expect(productForPersonCount(5).plan).toBe("family_5");
+    expect(productForPersonCount(7).plan).toBe("family_7");
+    expect(productForPersonCount(9).plan).toBe("family_7"); // en büyük tier
   });
 });
 

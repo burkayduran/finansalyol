@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native"
 import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
+import { useEntitlement } from "@/config/entitlements";
 import { formatTRY } from "@/core/format";
 import { colors, spacing, typography, FAMILY_SLICE_COLORS } from "@/theme";
 
@@ -11,7 +12,10 @@ interface DistItem { name: string; value: number; color: string }
 export default function People() {
   const router = useRouter();
   const data = useHousehold();
+  const { features } = useEntitlement();
   const [refreshing, setRefreshing] = useState(false);
+  const addPerson = () =>
+    features.canUseFamily ? router.push("/family") : router.push("/paywall?feature=family");
   useFocusEffect(useCallback(() => { data.reload(); }, [data.reload]));
   const onRefresh = async () => { setRefreshing(true); await data.reload(); setRefreshing(false); };
 
@@ -76,7 +80,7 @@ export default function People() {
         );
       })}
 
-      <Button title="+ Kişi ekle" variant="ghost" onPress={() => router.push("/family")} />
+      <Button title="+ Kişi ekle" variant="ghost" onPress={addPerson} />
     </ScrollView>
   );
 }

@@ -6,7 +6,7 @@ import { useSession } from "@/providers/SessionProvider";
 import { Button, Card, Field } from "@/components/ui";
 import { track } from "@/lib/analytics";
 import { ensureHousehold, handleSaveError } from "@/lib/errors";
-import { useEntitlement, FREE_LIMITS } from "@/config/entitlements";
+import { useEntitlement } from "@/config/entitlements";
 import { colors, spacing } from "@/theme";
 import type { Person } from "@/lib/database.types";
 
@@ -17,12 +17,9 @@ interface Invite {
   status: string;
 }
 
-// Bu sürüm tek hesapla en fazla 5 kişilik hane için tasarlandı.
-const MAX_PERSONS = 5;
-
 export default function Family() {
   const router = useRouter();
-  const entitlement = useEntitlement();
+  const { features } = useEntitlement();
   const { householdId } = useSession();
   const [persons, setPersons] = useState<Person[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
@@ -49,11 +46,17 @@ export default function Family() {
 
   const addPerson = async () => {
     if (!newPerson.trim()) return;
-    if (persons.length >= MAX_PERSONS) {
-      return Alert.alert("Kişi sınırı", "Bu sürümde en fazla 5 kişi ekleyebilirsin.");
-    }
-    if (entitlement === "free" && persons.length >= FREE_LIMITS.maxPersons) {
-      return router.push("/paywall");
+    // Aile/hane yönetimi premium; free kullanıcı → paywall.
+    if (!features.canUseFamily) return router.push("/paywall?feature=family");
+    if (persons.length >= features.personLimit) {
+      return Alert.alert(
+        "Kişi sınırı",
+        `Planında en fazla ${features.personLimit} kişi ekleyebilirsin. Daha fazlası için Aile Paketi'ni yükseltebilirsin.`,
+        [
+          { text: "Vazgeç", style: "cancel" },
+          { text: "Yükselt", onPress: () => router.push("/paywall") },
+        ]
+      );
     }
     if (!ensureHousehold(householdId)) return;
     const { error } = await supabase
@@ -87,9 +90,7 @@ export default function Family() {
     ]);
 
   const createInvite = async () => {
-    if (entitlement === "free" && !FREE_LIMITS.allowInvites) {
-      return router.push("/paywall");
-    }
+    if (!features.canUseFamily) return router.push("/paywall?feature=family");
     if (!inviteEmail.trim()) return Alert.alert("Eksik", "Davet için e-posta gir.");
     if (!ensureHousehold(householdId)) return;
     const { data, error } = await supabase

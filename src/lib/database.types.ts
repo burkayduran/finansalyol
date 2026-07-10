@@ -214,6 +214,31 @@ export type RateCapRow = {
   created_at: string;
 }
 
+export type EntitlementRow = {
+  user_id: string;
+  plan: string;
+  subscription_status: string;
+  person_limit: number;
+  premium_until: string | null;
+  platform: string | null;
+  product_id: string | null;
+  last_receipt_check_at: string | null;
+  updated_at: string;
+}
+
+export type ConsultRequestRow = {
+  id: string;
+  user_id: string | null;
+  household_id: string | null;
+  full_name: string;
+  phone: string;
+  email: string | null;
+  preferred_time: string | null;
+  note: string | null;
+  status: string;
+  created_at: string;
+}
+
 // Minimal Database tipi — supabase-js generic'i için yeterli yüzey.
 type Row<T> = { Row: T; Insert: Partial<T>; Update: Partial<T>; Relationships: [] };
 
@@ -247,6 +272,8 @@ export interface Database {
       cash_flows: Row<CashFlow>;
       fx_rates: Row<FxRate>;
       rate_caps: Row<RateCapRow>;
+      entitlements: Row<EntitlementRow>;
+      consult_requests: Row<ConsultRequestRow>;
       account_deletion_requests: Row<AccountDeletionRequest>;
       push_tokens: Row<{
         id: string;

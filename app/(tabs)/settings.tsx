@@ -9,7 +9,7 @@ import { registerPushToken } from "@/lib/push";
 import { toISODateLocal } from "@/core/dates";
 import { track } from "@/lib/analytics";
 import { BRAND } from "@/config/brand";
-import { useEntitlement, FREE_LIMITS } from "@/config/entitlements";
+import { useEntitlement } from "@/config/entitlements";
 import { FEATURES } from "@/config/features";
 import { Button, Card, Field } from "@/components/ui";
 import { colors, spacing } from "@/theme";
@@ -28,7 +28,7 @@ const SCOPES: { value: NotificationPrefs["scope"]; label: string }[] = [
 
 export default function Settings() {
   const router = useRouter();
-  const entitlement = useEntitlement();
+  const { features, plan, isPremium, setLocalPlan } = useEntitlement();
   const { session, householdId, signOut } = useSession();
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULTS);
   const [pushStatus, setPushStatus] = useState("bilinmiyor");
@@ -190,9 +190,12 @@ export default function Settings() {
         <Row label="Push bildirimi" value={prefs.push_enabled} onChange={(v) => update({ push_enabled: v })} />
         {FEATURES.emailReminders ? (
           <>
-            <Row label="E-posta" value={prefs.email_enabled} onChange={(v) => update({ email_enabled: v })} />
+            <Row label="E-posta (mail ile ödeme uyarısı)" value={prefs.email_enabled} onChange={(v) => {
+              if (v && !features.canUseEmailReminder) return router.push("/paywall?feature=email");
+              update({ email_enabled: v });
+            }} />
             <Row label="Haftalık özet" value={prefs.weekly_digest} onChange={(v) => {
-              if (v && entitlement === "free" && !FREE_LIMITS.emailDigest) return router.push("/paywall");
+              if (v && !features.canUseEmailReminder) return router.push("/paywall?feature=email");
               update({ weekly_digest: v });
             }} />
           </>
@@ -217,6 +220,34 @@ export default function Settings() {
             <View style={[styles.radio, prefs.scope === s.value && styles.radioOn]} />
           </Pressable>
         ))}
+      </Card>
+
+      <Card>
+        <Text style={styles.h}>Aile Paketi</Text>
+        <Line label="Mevcut plan" value={isPremium ? plan : "Ücretsiz"} />
+        <Text style={{ color: colors.inkSoft, fontSize: 13, marginBottom: spacing(1) }}>
+          Aile, nakit akışı, varlık takibi ve mail uyarıları Aile Paketi’ne özeldir.
+        </Text>
+        <Button
+          title={isPremium ? "Paketi görüntüle" : "Aile Paketi’ni başlat"}
+          variant={isPremium ? "ghost" : "primary"}
+          onPress={() => router.push("/paywall")}
+        />
+        {__DEV__ && (
+          <Button
+            title={isPremium ? "Premium'u kapat (dev)" : "Premium simüle et (dev)"}
+            variant="link"
+            onPress={() => setLocalPlan(isPremium ? null : "family_4")}
+          />
+        )}
+      </Card>
+
+      <Card>
+        <Text style={styles.h}>Borç Azaltma Planı</Text>
+        <Text style={{ color: colors.inkSoft, marginBottom: spacing(1) }}>
+          Uzmanla birebir görüşme — borç azaltma, bütçe ve nakit akışı planlaması.
+        </Text>
+        <Button title="Plan görüşmesi al" variant="ghost" onPress={() => router.push("/consult")} />
       </Card>
 
       <Card>

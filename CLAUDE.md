@@ -183,9 +183,14 @@ Yeni hesap kuralı eklerken önce `src/core/__tests__/engine.test.ts`. DB deği�
 - **Analytics:** PostHog EU (`EXPO_PUBLIC_POSTHOG_KEY`/`_HOST`); key yoksa dev console.
   identify yalnız user_id; PII/tutar property gönderilmez.
 - **Legal URL:** `brand.ts.urls` (web'de barınan gizlilik/kvkk/kosullar); Hesabım'da "tarayıcıda aç".
-- **Monetization iskeleti:** `src/config/entitlements.ts` (`useEntitlement` şimdilik "premium",
-  davranış değişmez). Gate'ler: davet gönder, kişi ekle >maxPersons, haftalık özet → `/paywall`.
-  Gerçek IAP (RevenueCat) dev-build sonrası.
+- **Monetization (v1.9):** RevenueCat YOK. Plan mantığı saf `src/core/plan.ts`
+  (free · family_4..7; `planFeatures`, fiyatlar, tier ürünler). `src/config/entitlements.tsx`
+  = `EntitlementProvider`/`useEntitlement`; plan çözümü: yerel override (test/IAP-öncesi)
+  → backend `entitlements` tablosu (aktif abonelik) → "free". Gate'ler: aile (people/family),
+  nakit akışı, varlık ekleme (add-asset/cashflow ekranları `PremiumGate`), mail uyarısı →
+  `/paywall?feature=…`. Kişi limiti plana göre. Satın alma stub'ı `src/lib/purchases.ts`
+  (gerçek StoreKit / Play Billing dev-build sonrası buraya). Danışmanlık ("Borç Azaltma Planı",
+  `/consult`) native IAP DIŞI: talep formu → `consult_requests`, manuel iletişim + ödeme.
 
 ### YAYIN KAPISI — marka/bundle (ilk EAS submit ÖNCESİ dondurulur, sonra ASLA değişmez)
 Karar verilince güncellenecek yerler:

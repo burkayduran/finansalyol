@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native"
 import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
+import { useEntitlement } from "@/config/entitlements";
 import { formatTRY } from "@/core/format";
 import { formatShortDate } from "@/core/dates";
 import { depositYield } from "@/core/deposit";
@@ -16,8 +17,11 @@ const KIND_LABELS: Record<string, string> = {
 export default function Assets() {
   const router = useRouter();
   const data = useHousehold();
+  const { features } = useEntitlement();
   const [refreshing, setRefreshing] = useState(false);
   useFocusEffect(useCallback(() => { data.reload(); }, [data.reload]));
+  const addAsset = () =>
+    features.canUseAssets ? router.push("/add-asset") : router.push("/paywall?feature=assets");
   const onRefresh = async () => { setRefreshing(true); await data.reload(); setRefreshing(false); };
 
   return (
@@ -75,7 +79,7 @@ export default function Assets() {
         </Card>
       )}
 
-      <Button title="+ Varlık ekle" onPress={() => router.push("/add-asset")} />
+      <Button title="+ Varlık ekle" onPress={addAsset} />
     </ScrollView>
   );
 }
