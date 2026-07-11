@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native"
 import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
+import { PremiumGate } from "@/components/PremiumGate";
 import { useEntitlement } from "@/config/entitlements";
 import { formatTRY } from "@/core/format";
 import { colors, spacing, typography, FAMILY_SLICE_COLORS } from "@/theme";
@@ -25,6 +26,15 @@ export default function People() {
     .sort((a, b) => b.value - a.value);
   const totalDebt = debtRows.reduce((s, r) => s + r.value, 0);
   const maxDebt = Math.max(1, ...debtRows.map((r) => r.value));
+
+  // Free kullanıcı gerçek aile datasını görmez; teaser + paywall.
+  if (!features.canUseFamily) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
+        <PremiumGate feature="family" />
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView

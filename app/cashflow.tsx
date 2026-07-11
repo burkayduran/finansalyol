@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
-import { PremiumGate } from "@/components/PremiumGate";
+import { LockedCashflowPreview } from "@/components/LockedCashflowPreview";
 import { ConsultCTA } from "@/components/ConsultCTA";
 import { useEntitlement } from "@/config/entitlements";
 import { CashflowChartWrap } from "@/components/analytics";
@@ -51,7 +51,8 @@ export default function Cashflow() {
   if (!features.canUseCashflow) {
     return (
       <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
-        <PremiumGate feature="cashflow" />
+        <LockedCashflowPreview />
+        <ConsultCTA />
       </ScrollView>
     );
   }

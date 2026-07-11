@@ -7,13 +7,13 @@ import { PaymentModal } from "@/components/PaymentModal";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { Donut, CashflowChartWrap } from "@/components/analytics";
 import { ConsultCTA } from "@/components/ConsultCTA";
-import { PremiumGate } from "@/components/PremiumGate";
+import { LockedCashflowPreview } from "@/components/LockedCashflowPreview";
 import { useEntitlement } from "@/config/entitlements";
 import { formatTRY } from "@/core/format";
 import { colors, spacing, typography, FAMILY_SLICE_COLORS } from "@/theme";
 import type { Debt, PaymentOccurrence } from "@/lib/database.types";
 
-const TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+const TR_MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
 export default function Dashboard() {
   const router = useRouter();
@@ -154,7 +154,7 @@ export default function Dashboard() {
         features.canUseCashflow ? (
           <CashflowChartWrap projection={data.projection} onDetail={() => router.push("/cashflow")} />
         ) : (
-          <PremiumGate feature="cashflow" />
+          <LockedCashflowPreview />
         )
       )}
 
