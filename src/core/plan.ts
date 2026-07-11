@@ -64,5 +64,5 @@ export function productForPersonCount(persons: number): PlanProduct {
 
 // --- Danışmanlık ürünü (native IAP DIŞI; birebir hizmet) ---
 export const CONSULT_PRODUCT_NAME = "Borç Azaltma Planı";
-export const CONSULT_PRICE = 1999;
-export const CONSULT_LAUNCH_PRICE = 1699;
+export const CONSULT_PRICE = 2499;
+export const CONSULT_LAUNCH_PRICE = 1999;

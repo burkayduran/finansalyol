@@ -44,7 +44,7 @@ export function PremiumGate({ feature = "generic" }: { feature?: PremiumFeature 
         <Text style={{ color: colors.ink, fontWeight: "800", fontSize: 18 }}>₺{priceText} / ay</Text>
         <Text style={{ color: colors.inkSoft, fontSize: 13 }}>4 kişi dahil</Text>
       </View>
-      <Button title="Aile Paketi’ni başlat" onPress={() => router.push("/paywall")} />
+      <Button title="Aile Paketi’ni gör" onPress={() => router.push(`/paywall?feature=${feature}`)} />
     </Card>
   );
 }

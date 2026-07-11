@@ -1,4 +1,5 @@
-import { ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Button, Card } from "@/components/ui";
 import { PREMIUM_COPY, type PremiumFeature } from "@/components/PremiumGate";
@@ -8,7 +9,8 @@ import {
   EXTRA_PERSON_PRICE,
   FAMILY_BASE_PRICE,
   PLAN_PRODUCTS,
-  productForPersonCount,
+  type Plan,
+  type PlanProduct,
 } from "@/core/plan";
 import { colors, spacing, typography } from "@/theme";
 
@@ -21,21 +23,22 @@ const BENEFITS = [
 ];
 
 const money = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2 });
+// Varsayılan seçim ETİK olarak 4 kişilik paket (kullanıcıdan habersiz üst paket seçili gelmez).
+const DEFAULT_PRODUCT = PLAN_PRODUCTS[0];
 
 export default function Paywall() {
   const router = useRouter();
   const { feature } = useLocalSearchParams<{ feature?: string }>();
   const { setLocalPlan, isPremium, plan } = useEntitlement();
+  const [selected, setSelected] = useState<PlanProduct>(DEFAULT_PRODUCT);
 
   const featureCopy = feature && feature in PREMIUM_COPY ? PREMIUM_COPY[feature as PremiumFeature] : null;
-  const baseProduct = productForPersonCount(4); // family_4 taban
 
-  const applyPlan = async (p: typeof baseProduct.plan) => {
+  const applyPlan = async (p: Plan) => {
     await setLocalPlan(p);
   };
-
   const buy = async () => {
-    await startPurchase(baseProduct, { applyPlan });
+    await startPurchase(selected, { applyPlan });
   };
   const restore = async () => {
     await restorePurchases({ applyPlan });
@@ -69,15 +72,23 @@ export default function Paywall() {
         </Text>
       </Card>
 
-      <Card>
-        <Text style={[typography.label, { color: colors.inkSoft, marginBottom: 6 }]}>Paketler</Text>
-        {PLAN_PRODUCTS.map((p) => (
-          <View key={p.productId} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 }}>
-            <Text style={{ color: colors.ink }}>{p.persons} kişi</Text>
-            <Text style={{ color: colors.inkSoft, fontWeight: "700" }}>₺{money(p.monthlyPrice)} / ay</Text>
-          </View>
-        ))}
-      </Card>
+      <Text style={[typography.label, { color: colors.inkSoft, marginBottom: 6 }]}>Paketini seç</Text>
+      {PLAN_PRODUCTS.map((p) => {
+        const active = selected.productId === p.productId;
+        return (
+          <Pressable key={p.productId} onPress={() => setSelected(p)} style={[styles.pkg, active && styles.pkgActive]}>
+            <View style={styles.radioWrap}>
+              <View style={[styles.radio, active && styles.radioOn]} />
+              <View>
+                <Text style={{ color: colors.ink, fontWeight: "700" }}>
+                  {p.persons} kişi{p.plan === "family_5" ? "  · Esnek seçim" : ""}
+                </Text>
+                <Text style={{ color: colors.inkSoft, fontSize: 13 }}>₺{money(p.monthlyPrice)} / ay</Text>
+              </View>
+            </View>
+          </Pressable>
+        );
+      })}
 
       {isPremium ? (
         <Card>
@@ -85,10 +96,25 @@ export default function Paywall() {
           <Text style={{ color: colors.inkSoft, fontSize: 13, marginTop: 4 }}>Mevcut plan: {plan}</Text>
         </Card>
       ) : (
-        <Button title="Aile Paketi’ni başlat" onPress={buy} />
+        <Button title={`${selected.persons} kişilik paketi başlat — ₺${money(selected.monthlyPrice)}/ay`} onPress={buy} />
       )}
       <Button title="Satın alımı geri yükle" variant="ghost" onPress={restore} />
       <Button title="Kapat" variant="link" onPress={() => router.back()} />
     </ScrollView>
   );
 }
+
+const styles = {
+  pkg: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 12,
+    padding: spacing(1.5),
+    marginBottom: spacing(1),
+    backgroundColor: colors.surface,
+  },
+  pkgActive: { borderColor: colors.accent, backgroundColor: colors.primarySoft },
+  radioWrap: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10 },
+  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: colors.muted },
+  radioOn: { borderColor: colors.accent, backgroundColor: colors.accent },
+};

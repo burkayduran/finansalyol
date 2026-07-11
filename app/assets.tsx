@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native"
 import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
+import { PremiumGate } from "@/components/PremiumGate";
 import { useEntitlement } from "@/config/entitlements";
 import { formatTRY } from "@/core/format";
 import { formatShortDate } from "@/core/dates";
@@ -23,6 +24,14 @@ export default function Assets() {
   const addAsset = () =>
     features.canUseAssets ? router.push("/add-asset") : router.push("/paywall?feature=assets");
   const onRefresh = async () => { setRefreshing(true); await data.reload(); setRefreshing(false); };
+
+  if (!features.canUseAssets) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: spacing(2) }}>
+        <PremiumGate feature="assets" />
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView

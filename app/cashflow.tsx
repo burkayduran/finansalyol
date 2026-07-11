@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useHousehold } from "@/hooks/useHousehold";
 import { Button, Card } from "@/components/ui";
 import { PremiumGate } from "@/components/PremiumGate";
+import { ConsultCTA } from "@/components/ConsultCTA";
 import { useEntitlement } from "@/config/entitlements";
 import { CashflowChartWrap } from "@/components/analytics";
 import { mandatoryMinimum } from "@/core/minimum";
@@ -119,6 +120,8 @@ export default function Cashflow() {
           ))}
         </Card>
       )}
+
+      <ConsultCTA />
     </ScrollView>
   );
 }

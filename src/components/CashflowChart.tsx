@@ -6,7 +6,8 @@ import { formatTRY } from "@/core/format";
 
 export interface CashflowMonth {
   monthKey: string;
-  label: string;
+  label: string; // kısa ay (grafik ekseni)
+  labelFull?: string; // tam ay adı (detay kartı)
   income: number;
   outflow: number;
   net: number;
@@ -63,7 +64,7 @@ export function CashflowChart({
 
       {selected && (
         <View style={styles.detail}>
-          <Text style={{ fontWeight: "800", color: colors.ink, marginBottom: spacing(0.5) }}>{selected.label} ayrıntısı</Text>
+          <Text style={{ fontWeight: "800", color: colors.ink, marginBottom: spacing(0.5) }}>{selected.labelFull ?? selected.label} ayrıntısı</Text>
           <Row label="Gelir" value={formatTRY(selected.income)} color={colors.asset} />
           <Row label="Gider + borç ödemesi" value={formatTRY(selected.outflow)} color={colors.inkSoft} />
           <View style={styles.netRow}>

@@ -1,7 +1,13 @@
 import { Pressable, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs, useRouter } from "expo-router";
+import { BRAND } from "@/config/brand";
 import { colors } from "@/theme";
+
+// Sabit marka alanı — sekme değişse de sol üst başlık değişmez (logotype).
+function BrandHeader() {
+  return <Text style={{ color: colors.primary, fontWeight: "800", fontSize: 18 }}>{BRAND.appName}</Text>;
+}
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 const tabIcon = (base: string, size = 24) =>
@@ -25,21 +31,22 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
         headerStyle: { backgroundColor: colors.surface },
-        headerTitleStyle: { color: colors.ink },
+        headerTitleAlign: "left",
+        headerTitle: () => <BrandHeader />,
         headerRight: () => <AddButton />,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Özet", tabBarIcon: tabIcon("home"), headerTitle: "Özet" }} />
-      <Tabs.Screen name="people" options={{ title: "Aile", tabBarIcon: tabIcon("people"), headerTitle: "Aile" }} />
+      <Tabs.Screen name="index" options={{ title: "Özet", tabBarIcon: tabIcon("home") }} />
+      <Tabs.Screen name="people" options={{ title: "Aile", tabBarIcon: tabIcon("people") }} />
       <Tabs.Screen
         name="add"
         options={{
-          title: "Ekle", headerTitle: "Yeni kayıt",
+          title: "Ekle",
           tabBarIcon: () => <Ionicons name="add-circle" size={30} color={colors.primary} />,
         }}
       />
-      <Tabs.Screen name="calendar" options={{ title: "Ödemeler", tabBarIcon: tabIcon("calendar"), headerTitle: "Ödeme planı" }} />
-      <Tabs.Screen name="settings" options={{ title: "Hesabım", tabBarIcon: tabIcon("settings"), headerTitle: "Hesabım" }} />
+      <Tabs.Screen name="calendar" options={{ title: "Ödemeler", tabBarIcon: tabIcon("calendar") }} />
+      <Tabs.Screen name="settings" options={{ title: "Hesabım", tabBarIcon: tabIcon("settings") }} />
     </Tabs>
   );
 }

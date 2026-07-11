@@ -6,8 +6,10 @@ import { Card } from "@/components/ui";
 import { PaymentModal } from "@/components/PaymentModal";
 import { OccurrenceRow } from "@/components/OccurrenceRow";
 import { Donut, CashflowChartWrap } from "@/components/analytics";
+import { ConsultCTA } from "@/components/ConsultCTA";
+import { PremiumGate } from "@/components/PremiumGate";
+import { useEntitlement } from "@/config/entitlements";
 import { formatTRY } from "@/core/format";
-import { CONSULT_PRICE, CONSULT_LAUNCH_PRICE } from "@/core/plan";
 import { colors, spacing, typography, FAMILY_SLICE_COLORS } from "@/theme";
 import type { Debt, PaymentOccurrence } from "@/lib/database.types";
 
@@ -16,7 +18,10 @@ const TR_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Ey
 export default function Dashboard() {
   const router = useRouter();
   const data = useHousehold();
+  const { features } = useEntitlement();
   const [refreshing, setRefreshing] = useState(false);
+  const openAssets = () =>
+    features.canUseAssets ? router.push("/assets") : router.push("/paywall?feature=assets");
   const [payTarget, setPayTarget] = useState<{ debt: Debt; occ: PaymentOccurrence } | null>(null);
 
   useFocusEffect(useCallback(() => { data.reload(); }, [data.reload]));
@@ -67,9 +72,11 @@ export default function Dashboard() {
             <Text style={styles.label}>Toplam borç ›</Text>
             <Text style={[typography.statAmount, { color: colors.ink }]}>{formatTRY(data.totalDebt)}</Text>
           </Pressable>
-          <Pressable style={{ flex: 1, alignItems: "flex-end" }} onPress={() => router.push("/assets")}>
+          <Pressable style={{ flex: 1, alignItems: "flex-end" }} onPress={openAssets}>
             <Text style={styles.label}>Toplam varlık ›</Text>
-            <Text style={[typography.statAmount, { color: colors.ink }]}>{formatTRY(data.totalAsset)}</Text>
+            <Text style={[typography.statAmount, { color: colors.ink }]}>
+              {features.canUseAssets ? formatTRY(data.totalAsset) : "•••"}
+            </Text>
           </Pressable>
         </View>
       </Card>
@@ -142,30 +149,17 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* 4 — Grafikler (nakit akışı) */}
+      {/* 4 — Nakit akışı: premium veri veya free teaser */}
       {!empty && (
-        <>
-          <Text style={[typography.cardTitle, { marginTop: spacing(1), marginBottom: spacing(0.5) }]}>Grafikler</Text>
+        features.canUseCashflow ? (
           <CashflowChartWrap projection={data.projection} onDetail={() => router.push("/cashflow")} />
-        </>
+        ) : (
+          <PremiumGate feature="cashflow" />
+        )
       )}
 
       {/* 5 — Borç Azaltma Planı danışmanlık CTA (nakit akışının hemen altında) */}
-      {!empty && (
-        <Card>
-          <Text style={typography.cardTitle}>Borçlarını daha rahat ödemek için plan çıkaralım mı?</Text>
-          <Text style={{ color: colors.inkSoft, marginTop: spacing(1) }}>
-            Gelir, gider, borç ve ödeme takvimine göre sana özel borç azaltma planı hazırlayalım.
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginTop: spacing(1) }}>
-            <Text style={{ color: colors.ink, fontWeight: "800", fontSize: 18 }}>Lansmana özel ₺{CONSULT_LAUNCH_PRICE}</Text>
-            <Text style={{ color: colors.muted, fontSize: 13, textDecorationLine: "line-through" }}>₺{CONSULT_PRICE}</Text>
-          </View>
-          <Pressable onPress={() => router.push("/consult")} style={styles.cta}>
-            <Text style={{ color: colors.primaryInk, fontWeight: "700" }}>Plan görüşmesi al</Text>
-          </Pressable>
-        </Card>
-      )}
+      {!empty && <ConsultCTA />}
 
       <PaymentModal
         visible={payTarget != null}

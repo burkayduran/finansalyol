@@ -1,7 +1,10 @@
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import { Stack, useRouter, useSegments } from "expo-router";
+
+const INTRO_SEEN_KEY = "fy_intro_seen";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider, useSession } from "@/providers/SessionProvider";
@@ -32,12 +35,13 @@ function RootNavigator() {
     return () => sub.remove();
   }, []);
 
-  // Yönlendirme bekçisi: oturum yoksa giriş; hane yoksa onboarding.
+  // Yönlendirme bekçisi: oturum yoksa giriş; ilk açılış intro; hane yoksa onboarding.
   useEffect(() => {
     if (loading) return;
     const inAuth = segments[0] === "sign-in";
     const inOnboarding = segments[0] === "onboarding";
     const inReset = segments[0] === "reset-password";
+    const inIntro = segments[0] === "intro";
 
     // Şifre sıfırlama akışı: kullanıcıyı ana ekrana fırlatma, reset ekranında tut.
     if (recovery) {
@@ -46,13 +50,24 @@ function RootNavigator() {
     }
     if (inReset) return;
 
-    if (!session && !inAuth) {
-      router.replace("/sign-in");
-    } else if (session && !householdId && !inOnboarding) {
-      router.replace("/onboarding");
-    } else if (session && householdId && (inAuth || inOnboarding)) {
-      router.replace("/");
+    if (!session) {
+      if (!inAuth) router.replace("/sign-in");
+      return;
     }
+
+    // Oturum var: ilk açılış intro'su (bir kez).
+    (async () => {
+      const introSeen = (await AsyncStorage.getItem(INTRO_SEEN_KEY)) === "1";
+      if (!introSeen) {
+        if (!inIntro) router.replace("/intro");
+        return;
+      }
+      if (!householdId && !inOnboarding) {
+        router.replace("/onboarding");
+      } else if (householdId && (inAuth || inOnboarding || inIntro)) {
+        router.replace("/");
+      }
+    })();
   }, [session, householdId, loading, segments, recovery]);
 
   if (loading) {
@@ -67,6 +82,7 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Screen name="sign-in" />
       <Stack.Screen name="reset-password" />
+      <Stack.Screen name="intro" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="add-debt" options={{ presentation: "modal", headerShown: true, title: "Borç ekle" }} />

@@ -7,46 +7,62 @@ import { useEntitlement } from "@/config/entitlements";
 import { formatTRY } from "@/core/format";
 import { colors, spacing, typography, FAMILY_SLICE_COLORS } from "@/theme";
 
-interface DistItem { name: string; value: number; color: string }
-
 export default function People() {
   const router = useRouter();
   const data = useHousehold();
   const { features } = useEntitlement();
   const [refreshing, setRefreshing] = useState(false);
-  const addPerson = () =>
-    features.canUseFamily ? router.push("/family") : router.push("/paywall?feature=family");
   useFocusEffect(useCallback(() => { data.reload(); }, [data.reload]));
   const onRefresh = async () => { setRefreshing(true); await data.reload(); setRefreshing(false); };
+  const addPerson = () =>
+    features.canUseFamily ? router.push("/family") : router.push("/paywall?feature=family");
 
-  // Kişi rengi personCards sırasına bağlı — borç/varlık modu değişse de aynı kalır.
   const palette = FAMILY_SLICE_COLORS;
-  const debtItems: DistItem[] = data.personCards
+  // Kişi rengi personCards sırasına sabit (borç/varlık modu değişse de aynı).
+  const debtRows = data.personCards
     .map((c, i) => ({ name: c.name, value: c.totalDebt, color: palette[i % palette.length] }))
-    .filter((x) => x.value > 0);
-  const assetItems: DistItem[] = data.personCards
-    .map((c, i) => ({ name: c.name, value: c.totalAsset, color: palette[i % palette.length] }))
-    .filter((x) => x.value > 0);
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+  const totalDebt = debtRows.reduce((s, r) => s + r.value, 0);
+  const maxDebt = Math.max(1, ...debtRows.map((r) => r.value));
 
   return (
     <ScrollView
       contentContainerStyle={{ padding: spacing(2) }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />}
     >
-      {data.personCards.length > 0 ? (
-        <Card>
-          <Text style={[typography.cardTitle, { color: colors.ink }]}>Aile panosu</Text>
-          <Text style={[typography.label, { color: colors.inkSoft }]}>
-            {data.persons.length} kişi · en fazla 5
-          </Text>
-
-          <Distribution title="Borç dağılımı" items={debtItems} />
-          <Distribution title="Varlık dağılımı" items={assetItems} />
-        </Card>
-      ) : (
+      {data.personCards.length === 0 ? (
         <Card>
           <Text style={[typography.label, { color: colors.inkSoft }]}>Henüz kişi yok. Aile bölümünden kişi ekle.</Text>
         </Card>
+      ) : (
+        <>
+          <Card>
+            <Text style={[typography.cardTitle, { color: colors.ink }]}>Aile borç dağılımı</Text>
+            <Text style={[typography.label, { color: colors.inkSoft, marginBottom: spacing(1) }]}>
+              {data.persons.length} kişi · en fazla 5
+            </Text>
+            {debtRows.length === 0 ? (
+              <Text style={{ color: colors.muted, fontSize: 13 }}>Borç yok.</Text>
+            ) : (
+              debtRows.map((r) => (
+                <DebtBar key={r.name} name={r.name} value={r.value} pct={r.value / maxDebt} share={r.value / totalDebt} color={r.color} />
+              ))
+            )}
+          </Card>
+
+          <Card>
+            <Text style={[typography.cardTitle, { color: colors.ink, marginBottom: spacing(1) }]}>Bu ay ödeme yükü</Text>
+            {data.personCards.map((c) => (
+              <View key={c.key} style={styles.payRow}>
+                <Text style={{ color: colors.ink }} numberOfLines={1}>{c.name}</Text>
+                <Text style={{ color: c.thisMonthPayment > 0 ? colors.ink : colors.muted, fontWeight: "700" }}>
+                  {c.thisMonthPayment > 0 ? formatTRY(c.thisMonthPayment) : "ödeme yok"}
+                </Text>
+              </View>
+            ))}
+          </Card>
+        </>
       )}
 
       {data.personCards.map((c) => {
@@ -65,7 +81,6 @@ export default function People() {
               </View>
               <Text style={[typography.label, { color: colors.inkSoft, marginTop: spacing(1) }]}>Net durum</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                {/* Büyük tutar nötr (ink); renk yalnız küçük sinyal noktası. */}
                 <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: net < 0 ? colors.danger : colors.asset }} />
                 <Text style={{ color: colors.ink, fontSize: 18, fontWeight: "800" }}>{formatTRY(net)}</Text>
               </View>
@@ -85,25 +100,18 @@ export default function People() {
   );
 }
 
-function Distribution({ title, items }: { title: string; items: DistItem[] }) {
-  const total = items.reduce((s, x) => s + x.value, 0);
+function DebtBar({ name, value, pct, share, color }: { name: string; value: number; pct: number; share: number; color: string }) {
   return (
-    <View style={{ marginTop: spacing(1.5) }}>
-      <Text style={[typography.label, { color: colors.inkSoft, marginBottom: 6 }]}>{title}</Text>
-      {total <= 0 ? (
-        <Text style={{ color: colors.muted, fontSize: 13 }}>Kayıt yok.</Text>
-      ) : (
-        <>
-          <View style={styles.bar}>
-            {items.map((it) => (
-              <View key={it.name} style={{ flex: it.value, backgroundColor: it.color }} />
-            ))}
-          </View>
-          <Text style={{ color: colors.inkSoft, fontSize: 12, marginTop: 6 }}>
-            {items.map((it) => `${it.name} %${Math.round((it.value / total) * 100)}`).join("  ·  ")}
-          </Text>
-        </>
-      )}
+    <View style={{ marginBottom: spacing(1) }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+        <Text style={{ color: colors.ink, fontSize: 13 }} numberOfLines={1}>{name}</Text>
+        <Text style={{ color: colors.inkSoft, fontSize: 13 }}>
+          {formatTRY(value)} · %{Math.round(share * 100)}
+        </Text>
+      </View>
+      <View style={styles.track}>
+        <View style={{ width: `${Math.max(4, Math.round(pct * 100))}%`, backgroundColor: color, height: 12, borderRadius: 6 }} />
+      </View>
     </View>
   );
 }
@@ -118,5 +126,6 @@ function Cell({ label, value }: { label: string; value: string }) {
 }
 
 const styles = {
-  bar: { flexDirection: "row" as const, height: 10, borderRadius: 5, overflow: "hidden" as const, backgroundColor: colors.line },
+  track: { height: 12, borderRadius: 6, backgroundColor: colors.line, overflow: "hidden" as const },
+  payRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, paddingVertical: 4 },
 };
