@@ -199,6 +199,7 @@ export type NotificationPrefs = {
   days_before: number;
   weekly_digest: boolean;
   digest_weekday: number;
+  hide_amount_in_notifications: boolean;
 }
 
 export type RateCapRow = {
@@ -239,6 +240,16 @@ export type ConsultRequestRow = {
   created_at: string;
 }
 
+export type LegalAcceptanceRow = {
+  id: string;
+  user_id: string;
+  document_type: "terms" | "kvkk_notice" | "privacy" | "explicit_consent";
+  document_version: string;
+  accepted_at: string;
+  locale: string | null;
+  created_at: string;
+}
+
 // Minimal Database tipi — supabase-js generic'i için yeterli yüzey.
 type Row<T> = { Row: T; Insert: Partial<T>; Update: Partial<T>; Relationships: [] };
 
@@ -274,6 +285,7 @@ export interface Database {
       rate_caps: Row<RateCapRow>;
       entitlements: Row<EntitlementRow>;
       consult_requests: Row<ConsultRequestRow>;
+      legal_acceptances: Row<LegalAcceptanceRow>;
       account_deletion_requests: Row<AccountDeletionRequest>;
       push_tokens: Row<{
         id: string;

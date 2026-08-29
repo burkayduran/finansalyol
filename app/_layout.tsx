@@ -13,6 +13,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { registerPushToken } from "@/lib/push";
 import { handleAuthUrl } from "@/lib/deepLinks";
 import { identify } from "@/lib/analytics";
+import { flushPendingAcceptance } from "@/lib/legal";
 import { colors } from "@/theme";
 
 function RootNavigator() {
@@ -25,6 +26,7 @@ function RootNavigator() {
     if (session?.user.id) {
       registerPushToken(session.user.id).catch(() => {});
       identify(session.user.id);
+      flushPendingAcceptance(session.user.id).catch(() => {});
     }
   }, [session?.user.id]);
 

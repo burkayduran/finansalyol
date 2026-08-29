@@ -19,6 +19,7 @@ const DEFAULTS: NotificationPrefs = {
   member_id: "", push_enabled: true, email_enabled: true,
   remind_7d: true, remind_3d: true, remind_1d: true, remind_due_day: true, remind_overdue: true,
   scope: "all", days_before: 1, weekly_digest: true, digest_weekday: 1,
+  hide_amount_in_notifications: true,
 };
 const SCOPES: { value: NotificationPrefs["scope"]; label: string }[] = [
   { value: "own", label: "Sadece kendi kayıtlarım" },
@@ -211,6 +212,7 @@ export default function Settings() {
         <Row label="1 gün önce" value={prefs.remind_1d} onChange={(v) => update({ remind_1d: v })} />
         <Row label="Son gün" value={prefs.remind_due_day} onChange={(v) => update({ remind_due_day: v })} />
         <Row label="Gecikirse ertesi gün" value={prefs.remind_overdue} onChange={(v) => update({ remind_overdue: v })} />
+        <Row label="Bildirimde tutarı gizle" value={prefs.hide_amount_in_notifications} onChange={(v) => update({ hide_amount_in_notifications: v })} />
         <Line label="Push izin durumu" value={pushStatus} />
         <Button title="Test bildirimi gönder" variant="ghost" onPress={sendTest} />
         <Text style={styles.sub}>Bildirim kapsamı</Text>

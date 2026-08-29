@@ -49,3 +49,12 @@ export function track(event: AnalyticsEvent, properties?: Record<string, unknown
 export function identify(userId: string): void {
   client?.identify(userId);
 }
+
+/** Çıkış / hesap silmede analytics kimliğini sıfırla (kullanıcı ayrımını temizle). */
+export function reset(): void {
+  try {
+    client?.reset();
+  } catch {
+    /* no-op */
+  }
+}

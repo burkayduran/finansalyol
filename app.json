@@ -13,16 +13,17 @@
       "backgroundColor": "#233056"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.finansalyol.app"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.finansalyol.app",
+      "buildNumber": "1"
     },
     "android": {
       "package": "com.finansalyol.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#233056"
-      },
-      "useNextNotificationsApi": true
+      }
     },
     "web": {
       "bundler": "metro",
@@ -39,11 +40,6 @@
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "eas": {
-        "projectId": "00000000-0000-0000-0000-000000000000"
-      }
     }
   }
 }

@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { reset as analyticsReset } from "@/lib/analytics";
 
 interface SessionValue {
   session: Session | null;
@@ -58,6 +59,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setHouseholdId,
       refreshHouseholds,
       signOut: async () => {
+        analyticsReset();
         await supabase.auth.signOut();
       },
       recovery,

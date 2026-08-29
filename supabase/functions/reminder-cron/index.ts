@@ -38,6 +38,7 @@ interface Pref {
   remind_due_day: boolean;
   remind_overdue: boolean;
   scope: "own" | "household" | "all";
+  hide_amount: boolean;
   tokens: string[];
 }
 
@@ -74,6 +75,7 @@ async function prefsForHousehold(householdId: string): Promise<Pref[]> {
       remind_due_day: pref?.remind_due_day ?? true,
       remind_overdue: pref?.remind_overdue ?? true,
       scope: pref?.scope ?? "all",
+      hide_amount: pref?.hide_amount_in_notifications ?? true,
       tokens: (toks ?? []).map((t: any) => t.expo_token),
     });
   }
@@ -156,7 +158,9 @@ async function run() {
       const title =
         days < 0 ? "Ödeme gecikti" : days === 0 ? "Bugün son ödeme günü" : "Ödeme yaklaşıyor";
       const when = days < 0 ? "dün son gündü" : days === 0 ? "bugün" : `${days} gün kaldı`;
-      await sendPush(p.tokens, title, `${name} — ${when}. Tutar: ${fmtTRY(remaining)}.`);
+      // Mahremiyet: varsayılan olarak tutar kilit ekranında gösterilmez.
+      const body = p.hide_amount ? `${name} — ${when}.` : `${name} — ${when}. Tutar: ${fmtTRY(remaining)}.`;
+      await sendPush(p.tokens, title, body);
       pushCount++;
     }
   }

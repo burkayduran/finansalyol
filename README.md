@@ -1,12 +1,17 @@
-# Borç Takip — Aile Sürümü
+# Finansal Yol
 
 > **Ailenizin parası, tek ekranda.**
 > Borçlar, ödemeler, birikimler — hep birlikte görün; biz de yaklaşınca hatırlatalım.
 
 Bir ailenin (eş, anne, baba… kim varsa) tüm **borçlarını, ödemelerini ve birikimlerini
-tek panoda** gösteren bulut tabanlı mobil uygulama. Son ödeme günü yaklaşınca **push +
-e-posta** ile hatırlatır. Borç-azaltma/asgari-tuzağı içgörüleri her borcun içinde
+tek panoda** gösteren bulut tabanlı mobil uygulama. Son ödeme günü yaklaşınca **push
+bildirimi** ile hatırlatır. Borç-azaltma/asgari-tuzağı içgörüleri her borcun içinde
 **isteğe bağlı bir sekme** — vitrin değil, yan özellik.
+
+> ℹ️ **Durum:** Aktif hatırlatma **push** ile çalışır. **E-posta hatırlatma/haftalık
+> özet** altyapısı hazır ancak reminder-cron içinde henüz gönderim YAPMAZ; Premium'a bağlı
+> gerçek e-posta gönderimi Resend ile ayrıca devreye alınacaktır (bkz. `MANUAL_ACTIONS.md`).
+> Abonelik satın alma da native IAP bağlanana kadar üretimde tamamlanmamıştır.
 
 Yön dokümanı: [`docs/aile-surumu-revize.md`](docs/aile-surumu-revize.md).
 
@@ -26,11 +31,13 @@ Yön dokümanı: [`docs/aile-surumu-revize.md`](docs/aile-surumu-revize.md).
 
 ## Hatırlatma
 
-- **Push (birincil):** borç başına, ayarlanan gün önce + son gün.
-- **E-posta (ikincil):** haftalık "bu haftanın ödemeleri" özeti.
-- Varsayılan ikisi de açık; kullanıcı `Ayarlar`'dan kanalları yönetir.
+- **Push (birincil, ÇALIŞIYOR):** occurrence başına, 7/3/1 gün önce + son gün + gecikme.
+  Mahremiyet: kilit ekranında borç tutarı varsayılan olarak gizli.
+- **E-posta (ikincil, HENÜZ GÖNDERİLMİYOR):** haftalık özet altyapısı planlı; Premium'a bağlı
+  gerçek Resend gönderimi devreye alınana kadar cron e-posta atmaz.
+- Kullanıcı `Ayarlar`'dan kanalları yönetir; mail seçeneği Premium gate arkasındadır.
 - Motor: günlük cron → **Supabase Edge Function** (`supabase/functions/reminder-cron`)
-  → Expo Push + Resend e-posta. Idempotency `reminders_log` ile.
+  → Expo Push. Idempotency `reminders_log` (occurrence+üye+kanal+tag) ile.
 
 ## Teknoloji
 
@@ -68,7 +75,7 @@ supabase/
 ├── migrations/              # 0002-0007 + 0008 (RPC) + 0009 (atomik ödeme record/reverse RPC)
 ├── rpc.sql                  # create_household / accept_invite / household_summary
 └── functions/
-    ├── reminder-cron/       # günlük hatırlatma (push + e-posta)
+    ├── reminder-cron/       # günlük hatırlatma (push; e-posta henüz gönderilmiyor)
     ├── fx-cron/             # TCMB döviz kurları (today.xml → fx_rates)
     └── price-cron/          # oto-fiyat (kripto: BtcTurk; fon/hisse/altın best-effort)
 ```
