@@ -102,6 +102,7 @@ function RootNavigator() {
       <Stack.Screen name="cashflow" options={{ headerShown: true, title: "Nakit akışı" }} />
       <Stack.Screen name="pay" options={{ presentation: "modal", headerShown: true, title: "Ödeme gir" }} />
       <Stack.Screen name="consult" options={{ presentation: "modal", headerShown: true, title: "Borç Azaltma Planı" }} />
+      <Stack.Screen name="delete-account" options={{ headerShown: true, title: "Hesabımı sil" }} />
       <Stack.Screen name="family" options={{ headerShown: true, title: "Aile" }} />
       <Stack.Screen name="paywall" options={{ presentation: "modal", headerShown: true, title: "Premium" }} />
     </Stack>

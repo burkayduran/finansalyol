@@ -1,6 +1,7 @@
 // Entitlement (plan) sağlayıcı. Plan çözümü: yerel override (test / IAP-öncesi stub)
 // → backend `entitlements` (aktif abonelik) → "free". RevenueCat YOK; gerçek native
-// IAP (StoreKit / Play Billing) dev-build sonrası `src/lib/purchases.ts`'e bağlanır.
+// Native IAP (StoreKit / Play Billing) `src/lib/iap.ts` (react-native-iap) ile bağlanır;
+// doğrulama server-side `verify-purchase` Edge Function'da yapılır.
 import {
   createContext,
   useCallback,

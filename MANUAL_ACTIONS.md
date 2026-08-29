@@ -55,6 +55,45 @@ Aşağıdaki URL'ler production'da **HTTP 200** dönmeli (release testine eklenm
 ## 8. Store privacy beyanları
 - App Store Privacy & Google Play Data Safety formları: `docs/STORE_PRIVACY_DECLARATIONS.md`'e göre doldur.
 
+## 8b. v2.4 — Edge Function deploy, secret'lar, IAP native, rollout (KOD HAZIR)
+
+**Edge Functions (deploy):** `supabase functions deploy delete-account verify-purchase reminder-cron fx-cron price-cron request-account-deletion confirm-account-deletion`
+
+**Secret'lar (`supabase secrets set ...`):**
+- `CRON_SECRET` — güçlü rastgele değer. Cron çağrılarında `Authorization: Bearer <CRON_SECRET>`
+  veya `x-cron-secret` başlığı zorunlu (reminder/fx/price-cron artık secret'sız 401 döner).
+  pg_cron/scheduler job'larını bu başlıkla + `POST` metoduyla çağıracak şekilde güncelle.
+- `RESEND_API_KEY`, `RESEND_FROM` — e-posta (reminder + hesap silme doğrulama). Yoksa e-posta
+  gönderilmez (NOT_CONFIGURED), uygulama bozulmaz.
+- `PUBLIC_CONFIRM_URL` — `confirm-account-deletion` fonksiyonunun public URL'i
+  (ör. `https://<ref>.functions.supabase.co/confirm-account-deletion`).
+- IAP doğrulama (gerçek): `APPLE_KEY_ID`, `APPLE_ISSUER_ID`, `APPLE_PRIVATE_KEY` (App Store Server API),
+  `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_PACKAGE_NAME` (Play Developer API). Yoksa `verify-purchase`
+  `NOT_CONFIGURED` döner (SAHTE başarı üretmez). Gerçek doğrulama gövdesi (App Store Server API /
+  Play Developer API çağrıları) bu credential'larla `verify-purchase/index.ts` içindeki adapter
+  TODO'larına eklenecek + Apple ASSN v2 / Google RTDN webhook'ları bağlanacak.
+
+**Native IAP build:** `react-native-iap` eklendi (package.json). Dev-build gerekir:
+- `app.json` plugins'e IAP config plugin'i / `expo-build-properties` ekle; `eas build` ile dev/prod build al.
+- App Store Connect + Play Console'da abonelik ürünleri (family_4..7_monthly) tanımlı olmalı.
+- Expo Go'da native IAP çalışmaz; `useIap()` bu durumda güvenli fallback verir.
+- Dev override: yalnız `__DEV__` + `EXPO_PUBLIC_IAP_DEV_OVERRIDE=1` ise yerel plan (test amaçlı).
+
+**Server-side premium enforcement (kontrollü rollout):**
+- Migration 0022 restrictive politikaları + kişi-limit trigger'ı `enforcement_on()` bayrağına bağlı.
+- Bayrak `app_config` tablosunda (`server_entitlement_enforcement_enabled`), varsayılan `false`
+  (mevcut davranış korunur). YALNIZ verify-purchase + receipt doğrulama canlıya alınıp entitlements
+  gerçek dolmaya başladıktan SONRA `true` yap (service-role ile):
+  `update public.app_config set value='true' where key='server_entitlement_enforcement_enabled';`
+
+**pg_cron job örneği (secret başlıklı):**
+`select cron.schedule('reminders','0 6 * * *', $$ select net.http_post('https://<ref>.functions.supabase.co/reminder-cron', '{}'::jsonb, headers:='{"Authorization":"Bearer <CRON_SECRET>","Content-Type":"application/json"}'::jsonb) $$);`
+
+## 8c. Public web deploy
+`web/` altındaki statik sayfaları HTTPS host'a deploy et; `/legal/gizlilik`, `/legal/kvkk`,
+`/legal/kosullar`, `/hesap-silme` HTTP 200 dönmeli. `hesap-silme.html` içindeki `__FUNCTIONS_BASE__`
+yer tutucusunu gerçek Functions URL'i ile değiştir. `src/config/brand.ts urls` domaini güncelle. (bkz. `web/README.md`)
+
 ## 9. Bağımlılık / güvenlik güncellemeleri
 - `npm audit` 52 açık bildiriyor (çoğu transitive/dev). Expo SDK yükseltmesi (SDK 51 → güncel)
   native build + cihaz testi gerektirir; bu ortamda güvenle doğrulanamadığından **yapılmadı**.

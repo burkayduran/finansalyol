@@ -4,12 +4,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Button, Card } from "@/components/ui";
 import { PREMIUM_COPY, type PremiumFeature } from "@/components/PremiumGate";
 import { useEntitlement } from "@/config/entitlements";
-import { startPurchase, restorePurchases } from "@/lib/purchases";
+import { useIap } from "@/lib/iap";
 import {
   EXTRA_PERSON_PRICE,
   FAMILY_BASE_PRICE,
   PLAN_PRODUCTS,
-  type Plan,
   type PlanProduct,
 } from "@/core/plan";
 import { colors, spacing, typography } from "@/theme";
@@ -29,19 +28,17 @@ const DEFAULT_PRODUCT = PLAN_PRODUCTS[0];
 export default function Paywall() {
   const router = useRouter();
   const { feature } = useLocalSearchParams<{ feature?: string }>();
-  const { setLocalPlan, isPremium, plan } = useEntitlement();
+  const { isPremium, plan } = useEntitlement();
+  const { products, busy, buy: iapBuy, restore } = useIap();
   const [selected, setSelected] = useState<PlanProduct>(DEFAULT_PRODUCT);
 
   const featureCopy = feature && feature in PREMIUM_COPY ? PREMIUM_COPY[feature as PremiumFeature] : null;
+  // Mağaza fiyatı varsa onu göster; yoksa koddaki fiyat (dev/Expo Go fallback).
+  const storePrice = (productId: string) =>
+    products.find((p) => p.productId === productId)?.localizedPrice ?? null;
 
-  const applyPlan = async (p: Plan) => {
-    await setLocalPlan(p);
-  };
   const buy = async () => {
-    await startPurchase(selected, { applyPlan });
-  };
-  const restore = async () => {
-    await restorePurchases({ applyPlan });
+    await iapBuy(selected.productId);
   };
 
   return (
@@ -83,7 +80,7 @@ export default function Paywall() {
                 <Text style={{ color: colors.ink, fontWeight: "700" }}>
                   {p.persons} kişi{p.plan === "family_5" ? "  · Esnek seçim" : ""}
                 </Text>
-                <Text style={{ color: colors.inkSoft, fontSize: 13 }}>₺{money(p.monthlyPrice)} / ay</Text>
+                <Text style={{ color: colors.inkSoft, fontSize: 13 }}>{storePrice(p.productId) ?? `₺${money(p.monthlyPrice)} / ay`}</Text>
               </View>
             </View>
           </Pressable>
@@ -96,7 +93,11 @@ export default function Paywall() {
           <Text style={{ color: colors.inkSoft, fontSize: 13, marginTop: 4 }}>Mevcut plan: {plan}</Text>
         </Card>
       ) : (
-        <Button title={`${selected.persons} kişilik paketi başlat — ₺${money(selected.monthlyPrice)}/ay`} onPress={buy} />
+        <Button
+          title={`${selected.persons} kişilik paketi başlat — ${storePrice(selected.productId) ?? `₺${money(selected.monthlyPrice)}/ay`}`}
+          onPress={buy}
+          loading={busy}
+        />
       )}
       <Button title="Satın alımı geri yükle" variant="ghost" onPress={restore} />
       <Button title="Kapat" variant="link" onPress={() => router.back()} />

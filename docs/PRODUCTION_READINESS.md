@@ -35,8 +35,25 @@
 - **A11 (finansal doğruluk):** 60 mevcut test korundu + 9 yeni (ay sonu/artık yıl/FX/occurrence).
 - **A12 (kalite):** ESLint + testler CI'ya hazır; tam e2e (auth/IAP sandbox/RLS/erişilebilirlik) follow-up.
 
+## v2.4 — production blocker kod tarafı (bu turda eklendi)
+- **Hesap silme:** `delete-account` Edge Function (JWT, self-only, service-role, idempotent,
+  hane senaryoları + owner-transfer) + durum modeli (0019) + istemci ekranı (`/delete-account`)
+  + public akış (`request/confirm-account-deletion` + 0024 + web/hesap-silme.html).
+- **Cron güvenliği:** reminder/fx/price-cron CRON_SECRET (Bearer/x-cron-secret), POST-only, 401.
+- **E-posta:** reminder-cron gerçek Resend gönderimi (adapter) + claim→sending→sent/failed durum
+  modeli (0023) + premium/verified/window koşulları + push receipt & DeviceNotRegistered temizliği.
+- **Native IAP:** `react-native-iap` + `src/lib/iap.ts` (connect/products/purchase/listener/restore/
+  cleanup) + `verify-purchase` Edge Function (JWT, adapter, NOT_CONFIGURED, idempotent, replay-safe).
+- **Server-side premium:** 0021 (ownership + status) + 0022 (restrictive policies + kişi-limit trigger)
+  + 0020 (rollout bayrağı, varsayılan KAPALI → mevcut kullanıcı kilitlenmez).
+- **Hukuki kabul:** legal_acceptances immutable + RLS (self insert/select, update/delete yok).
+- **Testler:** +18 saf mantık testi (subscription/verification/cron/reminder/deletion) → 87 test.
+
 ## Production'a hazır mı?
-**HAYIR — henüz değil.** Çekirdek borç-takip deneyimi (free) sağlam ve yayına yakın; ancak
-para kazanma (IAP), server-side premium güvenliği, gerçek e-posta, hesap-silme işleme ve public
-legal sayfaları **dış hesap/secret/native build** gerektirir ve bu ortamda tamamlanıp doğrulanamaz.
-Bunlar `MANUAL_ACTIONS.md`'de net adımlarla listelendi. O adımlar tamamlanınca yeniden değerlendirilmeli.
+**KOD TARAFI HAZIR; DEPLOY/CREDENTIAL BEKLİYOR.** Tüm blocker'ların kod, migration, Edge Function
+ve testleri yazıldı (typecheck/lint/87 test yeşil). Canlıya alım için kalan işler yalnız dış
+hesap/secret/native build: Edge Function deploy + CRON_SECRET/RESEND/Apple/Google credential'ları,
+`react-native-iap` için dev-build + store ürün tanımları + sandbox testi, `verify-purchase` adapter
+gövdelerinin gerçek Apple/Google API çağrılarıyla doldurulması, ve doğrulama canlı olunca
+`server_entitlement_enforcement_enabled=true` yapılması. Hepsi `MANUAL_ACTIONS.md` §8b/§8c'de.
+Bu adımlar + sandbox/RLS canlı testleri tamamlanana kadar **production'a "hazır" denemez.**

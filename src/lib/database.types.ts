@@ -135,9 +135,18 @@ export type AccountDeletionRequest = {
   id: string;
   user_id: string;
   household_id: string | null;
-  status: "pending" | "done" | "cancelled";
+  status: "pending" | "processing" | "completed" | "failed" | "cancelled";
   reason: string | null;
   created_at: string;
+  requested_at: string;
+  processing_started_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  failure_reason: string | null;
+  retry_count: number;
+  requested_by: string | null;
+  replacement_owner_id: string | null;
+  last_attempt_at: string | null;
 }
 
 export type FxRate = {

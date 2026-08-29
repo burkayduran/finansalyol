@@ -80,14 +80,32 @@ async function run() {
   return { updated, failures };
 }
 
-Deno.serve(async () => {
+// Cron secret koruması (fail-closed): CRON_SECRET yoksa/eşleşmezse 401.
+function checkCron(req: Request): boolean {
+  const expected = Deno.env.get("CRON_SECRET");
+  if (!expected) return false;
+  const auth = req.headers.get("authorization");
+  const provided = auth?.startsWith("Bearer ") ? auth.slice(7) : (req.headers.get("x-cron-secret") ?? "");
+  if (provided.length !== expected.length) return false;
+  let r = 0;
+  for (let i = 0; i < provided.length; i++) r |= provided.charCodeAt(i) ^ expected.charCodeAt(i);
+  return r === 0;
+}
+
+Deno.serve(async (req) => {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ ok: false, error: "method_not_allowed" }), { status: 405, headers: { "Content-Type": "application/json" } });
+  }
+  if (!checkCron(req)) {
+    return new Response(JSON.stringify({ ok: false, error: "unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+  }
   try {
     const result = await run();
     return new Response(JSON.stringify({ ok: true, ...result }), {
       headers: { "Content-Type": "application/json" },
     });
-  } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: String(e) }), {
+  } catch (_e) {
+    return new Response(JSON.stringify({ ok: false, error: "internal_error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

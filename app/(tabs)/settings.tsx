@@ -109,22 +109,8 @@ export default function Settings() {
     await Share.share({ message: JSON.stringify(payload, null, 2) });
   };
 
-  const requestDeletion = () =>
-    Alert.alert("Hesabımı sil", "Bu işlem geri alınamaz. Talebin alınır ve hesabın ile hane verilerin 30 gün içinde işleme alınıp silinir. Devam edilsin mi?", [
-      { text: "Vazgeç", style: "cancel" },
-      {
-        text: "Talep oluştur",
-        style: "destructive",
-        onPress: async () => {
-          const { data, error } = await supabase.from("account_deletion_requests")
-            .insert({ user_id: session!.user.id, household_id: householdId }).select("created_at").single();
-          if (error) return Alert.alert("Olmadı", "Talep oluşturulamadı. Lütfen tekrar dene.");
-          setDeletionAt(data?.created_at ?? new Date().toISOString());
-          track("delete_request_created");
-          Alert.alert("Talebin alındı", "Hesap silme talebin kaydedildi. 30 gün içinde işleme alınacak.");
-        },
-      },
-    ]);
+  // Silme akışı ayrı ekranda (hane sahipliği devri + gerçek silme).
+  const requestDeletion = () => router.push("/delete-account");
 
   const [smoke, setSmoke] = useState<string>("");
   const runSmoke = async () => {

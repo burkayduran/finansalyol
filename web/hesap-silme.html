@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Finansal Yol — Hesap Silme</title>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,sans-serif;max-width:560px;margin:40px auto;padding:0 16px;color:#16203A;line-height:1.6}
+  h1{font-size:22px} p{color:#334} label{display:block;margin:16px 0 6px;font-weight:600}
+  input{width:100%;padding:12px;border:1px solid #E6E8EC;border-radius:10px;font-size:16px;box-sizing:border-box}
+  button{margin-top:16px;background:#233056;color:#fff;border:0;border-radius:12px;padding:14px 18px;font-size:16px;font-weight:700;cursor:pointer}
+  .muted{color:#8a8f9a;font-size:13px} .ok{color:#1E7F5C;font-weight:700} .err{color:#C0392B;font-weight:700}
+  ul{color:#334}
+</style>
+</head>
+<body>
+<h1>Finansal Yol — Hesap ve Veri Silme</h1>
+<p>Bu sayfadan <strong>Finansal Yol</strong> hesabının silinmesini talep edebilirsin. Yalnızca e-posta yazmak hesabı silmez; e-posta adresine bir <strong>doğrulama bağlantısı</strong> göndeririz, bağlantıyı onaylayınca talep işleme alınır.</p>
+
+<p><strong>Silinecek veriler:</strong></p>
+<ul>
+  <li>Profil bilgilerin (ad, e-posta)</li>
+  <li>Bildirim tercihlerin ve push kayıtların</li>
+  <li>Abonelik entitlement kaydın</li>
+  <li>Hukuki kabul kayıtların</li>
+  <li>Sana ait finansal veriler (borç, varlık, ödeme) ve hane verilerin</li>
+</ul>
+<p class="muted">Hukuken saklanması gereken sınırlı kayıtlar mevzuat süresince tutulabilir. Hesap silme, App Store / Google Play aboneliğini otomatik iptal etmez; aboneliğini ilgili mağazadan ayrıca iptal etmelisin. Hanende başka üyeler varsa ve hane sahibiysen, sahipliği devretmek için uygulamadan giriş yapman gerekebilir.</p>
+
+<form id="f">
+  <label for="email">E-posta adresin</label>
+  <input id="email" type="email" required placeholder="ornek@eposta.com" />
+  <button type="submit">Doğrulama bağlantısı gönder</button>
+</form>
+<p id="msg"></p>
+
+<script>
+  // Deploy sırasında bu değeri Supabase Functions taban URL'i ile değiştir:
+  // örn. https://<project-ref>.functions.supabase.co
+  var FUNCTIONS_BASE = "__FUNCTIONS_BASE__";
+  document.getElementById("f").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var msg = document.getElementById("msg");
+    var email = document.getElementById("email").value.trim();
+    msg.textContent = "Gönderiliyor…"; msg.className = "muted";
+    try {
+      await fetch(FUNCTIONS_BASE + "/request-account-deletion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email }),
+      });
+      // Kullanıcı numaralandırmayı önlemek için her durumda aynı mesaj.
+      msg.textContent = "Talebin alındıysa e-posta adresine doğrulama bağlantısı gönderildi.";
+      msg.className = "ok";
+    } catch (_e) {
+      msg.textContent = "Bir sorun oluştu, lütfen daha sonra tekrar dene.";
+      msg.className = "err";
+    }
+  });
+</script>
+</body>
+</html>
