@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Finansal Yol",
+    "slug": "finansal-yol",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "finansalyol",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#233056"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.finansalyol.app",
+      "buildNumber": "1"
+    },
+    "android": {
+      "package": "com.finansalyol.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#233056"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "color": "#233056"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
